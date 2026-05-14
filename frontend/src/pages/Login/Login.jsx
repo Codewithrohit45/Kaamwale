@@ -20,7 +20,9 @@ export default function Login() {
     
     try {
       const user = await login(email, password);
-      if (user.role !== role) {
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (user.role !== role) {
         // If they selected the wrong role toggle but logged in successfully anyway, 
         // redirect them to their actual role's dashboard.
         navigate(user.role === 'provider' ? '/provider/dashboard' : '/user/dashboard');

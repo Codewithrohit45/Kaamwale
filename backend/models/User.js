@@ -16,10 +16,13 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'provider'],
+    enum: ['user', 'provider', 'admin'],
     default: 'user',
   },
   phone: {
+    type: String,
+  },
+  image: {
     type: String,
   },
   // Fields specific to providers

@@ -12,6 +12,13 @@ import ProviderOverview from "./pages/Dashboard/ProviderOverview";
 import UserDashboard from "./pages/Dashboard/UserDashboard";
 import Messages from "./pages/Dashboard/Messages";
 
+import AdminLayout from "./layouts/AdminLayout";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminBookings from "./pages/Admin/AdminBookings";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import AdminProtectedRoute from "./components/AdminProtectedRoute";
+
 function App() {
   return (
     <BrowserRouter>
@@ -30,6 +37,12 @@ function App() {
         {/* User Dashboard Routes */}
         <Route path="/user/dashboard" element={<DashboardLayout role="user"><UserDashboard /></DashboardLayout>} />
         <Route path="/user/messages" element={<DashboardLayout role="user"><Messages /></DashboardLayout>} />
+        
+        {/* Admin Dashboard Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/users" element={<AdminProtectedRoute><AdminLayout><AdminUsers /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/bookings" element={<AdminProtectedRoute><AdminLayout><AdminBookings /></AdminLayout></AdminProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
