@@ -13,14 +13,10 @@ export default function ProviderOverview() {
     const fetchBookings = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/bookings/provider', {
-          headers: {
-            'Authorization': `Bearer ${user?.token}`
-          }
+          headers: { 'Authorization': `Bearer ${user?.token}` }
         });
         const data = await res.json();
-        if (res.ok) {
-          setBookings(data);
-        }
+        if (res.ok) setBookings(data);
       } catch (error) {
         console.error('Failed to fetch provider bookings', error);
       } finally {
@@ -30,6 +26,30 @@ export default function ProviderOverview() {
 
     if (user?.token) fetchBookings();
   }, [user]);
+
+  // Real-time location broadcasting for "In-Progress" jobs
+  useEffect(() => {
+    const activeJobs = bookings.filter(b => b.status === 'in-progress');
+    if (activeJobs.length === 0 || !socket) return;
+
+    const interval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          activeJobs.forEach(job => {
+            socket.emit('updateWorkerLocation', {
+              receiverId: job.user._id,
+              bookingId: job._id,
+              coords: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+            });
+          });
+        },
+        (err) => console.warn('Location tracking failed', err),
+        { enableHighAccuracy: true }
+      );
+    }, 30000); // Every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [bookings, socket]);
 
   const handleUpdateStatus = async (id, newStatus) => {
     let workerCoords = null;

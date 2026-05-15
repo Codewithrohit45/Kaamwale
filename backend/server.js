@@ -81,6 +81,13 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('updateWorkerLocation', ({ receiverId, bookingId, coords }) => {
+    const receiverSocket = onlineUsers.get(receiverId);
+    if (receiverSocket) {
+      io.to(receiverSocket).emit('workerLocationChanged', { bookingId, coords });
+    }
+  });
+
   socket.on('disconnect', () => {
     for (const [userId, socketId] of onlineUsers.entries()) {
       if (socketId === socket.id) {

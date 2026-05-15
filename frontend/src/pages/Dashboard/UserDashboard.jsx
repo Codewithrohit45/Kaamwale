@@ -1,10 +1,95 @@
 import { useState, useEffect, useContext } from 'react';
-import { FiClock, FiCheckCircle, FiXCircle, FiStar, FiMapPin, FiDollarSign, FiCreditCard } from 'react-icons/fi';
+import { FiClock, FiCheckCircle, FiXCircle, FiStar, FiMapPin, FiDollarSign, FiCreditCard, FiDownload } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { Link } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Button from '../../components/Button';
+...
+                    {booking.status === 'in-progress' && (
+                      <button
+                        onClick={() => setTrackingModal(booking)}
+                        className="px-3 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 font-medium rounded-lg hover:bg-indigo-100 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <FiMapPin size={14} /> Track Worker
+                      </button>
+                    )}
+                    {booking.status === 'in-progress' && booking.otpRequested && (
+...
+      {/* Live Tracking Modal */}
+      {trackingModal && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in duration-300">
+            <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Live Worker Tracking</h3>
+                <p className="text-sm text-slate-500">Tracking: {trackingModal.provider?.name}</p>
+              </div>
+              <button onClick={() => setTrackingModal(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+                <FiXCircle size={24} className="text-slate-400" />
+              </button>
+            </div>
+            
+            <div className="flex-1 relative">
+              <MapContainer 
+                center={[workerLocations[trackingModal._id]?.lat || 19.0760, workerLocations[trackingModal._id]?.lng || 72.8777]} 
+                zoom={14} 
+                className="h-full w-full"
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                
+                {/* Destination (Customer) */}
+                <Marker position={[trackingModal.customerCoords?.coordinates[1] || 19.0760, trackingModal.customerCoords?.coordinates[0] || 72.8777]}>
+                  <Popup>Service Location</Popup>
+                </Marker>
+
+                {/* Worker */}
+                {workerLocations[trackingModal._id] && (
+                  <Marker 
+                    position={[workerLocations[trackingModal._id].lat, workerLocations[trackingModal._id].lng]}
+                    icon={L.divIcon({
+                      className: 'custom-div-icon',
+                      html: `<div style="background-color: #14b8a6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+                      iconSize: [20, 20],
+                      iconAnchor: [10, 10]
+                    })}
+                  >
+                    <Popup>Worker is here</Popup>
+                  </Marker>
+                )}
+                <RecenterMap coords={workerLocations[trackingModal._id]} />
+              </MapContainer>
+
+              <div className="absolute bottom-6 left-6 right-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20 z-[1000] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center animate-pulse">
+                    <FiMapPin className="text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">Real-time GPS Tracking Active</p>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Updates every 30 seconds</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 font-medium">Est. Arrival</p>
+                  <p className="font-bold text-teal-600">Calculating...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 import { useToast } from '../../components/NotificationToast';
+
+const RecenterMap = ({ coords }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (coords) map.setView([coords.lat, coords.lng], map.getZoom());
+  }, [coords, map]);
+  return null;
+};
 
 export default function UserDashboard() {
   const { user } = useContext(AuthContext);
@@ -22,6 +107,16 @@ export default function UserDashboard() {
   const [disputeData, setDisputeData] = useState({ reason: '', details: '' });
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
   const [showOtp, setShowOtp] = useState(null); // { id, otp }
+  const [trackingModal, setTrackingModal] = useState(null); // booking object
+  const [workerLocations, setWorkerLocations] = useState({}); // { bookingId: { lat, lng } }
+
+  useEffect(() => {
+    if (!socket) return;
+    socket.on('workerLocationChanged', ({ bookingId, coords }) => {
+      setWorkerLocations(prev => ({ ...prev, [bookingId]: coords }));
+    });
+    return () => socket.off('workerLocationChanged');
+  }, [socket]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -185,6 +280,29 @@ export default function UserDashboard() {
     }
   };
 
+  const handleDownloadInvoice = async (bookingId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/invoice`, {
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${bookingId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        toast('Failed to download invoice', 'error');
+      }
+    } catch (err) {
+      console.error('Invoice download failed', err);
+      toast('Error downloading invoice', 'error');
+    }
+  };
+
   const handleApproveWork = async (bookingId) => {
     try {
       const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/approve-work`, {
@@ -342,6 +460,14 @@ export default function UserDashboard() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {booking.status === 'completed' && (
+                      <button
+                        onClick={() => handleDownloadInvoice(booking._id)}
+                        className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <FiDownload size={14} /> Invoice
+                      </button>
+                    )}
                     {booking.status === 'completed' && !booking.rating && (
                       <button
                         onClick={() => setReviewModal(booking._id)}
@@ -514,6 +640,70 @@ export default function UserDashboard() {
             <Button variant="primary" className="w-full py-3" onClick={() => setShowOtp(null)}>
               Got it
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Live Tracking Modal */}
+      {trackingModal && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 animate-in zoom-in duration-300">
+            <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+              <div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Live Worker Tracking</h3>
+                <p className="text-sm text-slate-500">Tracking: {trackingModal.provider?.name}</p>
+              </div>
+              <button onClick={() => setTrackingModal(null)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+                <FiXCircle size={24} className="text-slate-400" />
+              </button>
+            </div>
+            
+            <div className="flex-1 relative">
+              <MapContainer 
+                center={[workerLocations[trackingModal._id]?.lat || 19.0760, workerLocations[trackingModal._id]?.lng || 72.8777]} 
+                zoom={14} 
+                className="h-full w-full"
+              >
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                
+                {/* Destination (Customer) */}
+                <Marker position={[trackingModal.customerCoords?.coordinates[1] || 19.0760, trackingModal.customerCoords?.coordinates[0] || 72.8777]}>
+                  <Popup>Service Location</Popup>
+                </Marker>
+
+                {/* Worker */}
+                {workerLocations[trackingModal._id] && (
+                  <Marker 
+                    position={[workerLocations[trackingModal._id].lat, workerLocations[trackingModal._id].lng]}
+                    icon={L.divIcon({
+                      className: 'custom-div-icon',
+                      html: `<div style="background-color: #14b8a6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.3);"></div>`,
+                      iconSize: [20, 20],
+                      iconAnchor: [10, 10]
+                    })}
+                  >
+                    <Popup>Worker is here</Popup>
+                  </Marker>
+                )}
+                <RecenterMap coords={workerLocations[trackingModal._id]} />
+              </MapContainer>
+
+              <div className="absolute bottom-6 left-6 right-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-white/20 z-[1000] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center animate-pulse">
+                    <FiMapPin className="text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">Real-time GPS Tracking Active</p>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Updates every 30 seconds</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-500 font-medium">Est. Arrival</p>
+                  <p className="font-bold text-teal-600">Calculating...</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
