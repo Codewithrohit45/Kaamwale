@@ -271,6 +271,62 @@ const getAnalytics = async (req, res) => {
   }
 };
 
+// @desc    Get detailed revenue stats
+// @route   GET /api/admin/revenue-stats
+// @access  Private/Admin
+const getRevenueStats = async (req, res) => {
+  try {
+    const stats = await Booking.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: {
+          _id: null,
+          totalGMV: { $sum: '$totalPrice' },
+          totalPlatformFee: { $sum: '$platformFee' },
+          totalTax: { $sum: '$taxAmount' },
+          totalCommission: { $sum: '$commissionAmount' }
+      }}
+    ]);
+
+    // Daily Revenue for last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const dailyStats = await Booking.aggregate([
+      { $match: { status: 'completed', createdAt: { $gte: thirtyDaysAgo } } },
+      { $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          revenue: { $sum: '$platformFee' },
+          bookings: { $sum: 1 }
+      }},
+      { $sort: { _id: 1 } }
+    ]);
+
+    // Category Revenue
+    const categoryStats = await Booking.aggregate([
+      { $match: { status: 'completed' } },
+      { $lookup: {
+          from: 'users',
+          localField: 'provider',
+          foreignField: '_id',
+          as: 'providerInfo'
+      }},
+      { $unwind: '$providerInfo' },
+      { $group: {
+          _id: '$providerInfo.category',
+          revenue: { $sum: '$platformFee' }
+      }}
+    ]);
+
+    res.json({
+      summary: stats[0] || { totalGMV: 0, totalPlatformFee: 0, totalTax: 0, totalCommission: 0 },
+      dailyTrends: dailyStats,
+      categoryDistribution: categoryStats.map(s => ({ name: s._id, value: s.revenue }))
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get all coupons
 // @route   GET /api/admin/coupons
 // @access  Private/Admin
@@ -319,6 +375,7 @@ module.exports = {
   toggleVerification,
   reviewKYC,
   getAnalytics,
+  getRevenueStats,
   getCoupons,
   createCoupon,
   updateCoupon

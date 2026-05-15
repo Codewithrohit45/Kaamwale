@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiHome, FiUsers, FiCalendar, FiLogOut, FiMenu, FiX, FiShield, FiBarChart, FiTag, FiDollarSign } from 'react-icons/fi';
+import { FiHome, FiUsers, FiCalendar, FiLogOut, FiMenu, FiX, FiShield, FiBarChart, FiTag, FiDollarSign, FiTrendingUp } from 'react-icons/fi';
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
@@ -17,6 +17,7 @@ export default function AdminLayout({ children }) {
   const adminLinks = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <FiHome /> },
     { name: 'Analytics', path: '/admin/analytics', icon: <FiBarChart /> },
+    { name: 'Finance', path: '/admin/finance', icon: <FiTrendingUp /> },
     { name: 'Promo Codes', path: '/admin/coupons', icon: <FiTag /> },
     { name: 'Payouts', path: '/admin/payouts', icon: <FiDollarSign /> },
     { name: 'Users', path: '/admin/users', icon: <FiUsers /> },

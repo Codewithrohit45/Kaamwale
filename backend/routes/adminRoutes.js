@@ -10,6 +10,7 @@ const {
   toggleVerification,
   reviewKYC,
   getAnalytics,
+  getRevenueStats,
   getCoupons,
   createCoupon,
   updateCoupon
@@ -29,6 +30,7 @@ router.put('/bookings/:id/cancel', adminCancelBooking);
 router.get('/stats', getAdminStats);
 router.put('/bookings/:id/resolve-dispute', resolveDispute);
 router.get('/analytics', getAnalytics);
+router.get('/revenue-stats', getRevenueStats);
 router.get('/coupons', getCoupons);
 router.post('/coupons', createCoupon);
 router.put('/coupons/:id', updateCoupon);
