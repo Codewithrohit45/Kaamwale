@@ -29,6 +29,7 @@ import AdminKYC from "./pages/Admin/AdminKYC";
 import AdminAnalytics from "./pages/Admin/AdminAnalytics";
 import AdminPayouts from "./pages/Admin/AdminPayouts";
 import AdminCoupons from "./pages/Admin/AdminCoupons";
+import AdminFinance from "./pages/Admin/AdminFinance";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -69,6 +70,7 @@ function App() {
         <Route path="/admin/bookings" element={<AdminProtectedRoute><AdminLayout><AdminBookings /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/kyc" element={<AdminProtectedRoute><AdminLayout><AdminKYC /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminLayout><AdminAnalytics /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/finance" element={<AdminProtectedRoute><AdminLayout><AdminFinance /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/payouts" element={<AdminProtectedRoute><AdminLayout><AdminPayouts /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/coupons" element={<AdminProtectedRoute><AdminLayout><AdminCoupons /></AdminLayout></AdminProtectedRoute>} />
       </Routes>
