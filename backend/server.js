@@ -4,12 +4,30 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const rateLimit = require('express-rate-limit');
+const initCronJobs = require('./utils/cronJobs');
 
 // Connect Database
-connectDB();
+connectDB().then(() => {
+  // Initialize Background Jobs
+  initCronJobs();
+});
 
 const app = express();
 const server = http.createServer(app);
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 100,
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: 'Too many login attempts, please try again after 15 minutes' }
+});
 
 // Socket.io setup
 const io = new Server(server, {
@@ -78,6 +96,8 @@ io.on('connection', (socket) => {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api/', limiter);
+app.use('/api/auth/', authLimiter);
 
 // Base Route
 app.get('/', (req, res) => {
@@ -90,7 +110,10 @@ app.use('/api/providers', require('./routes/providerRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/webhooks', require('./routes/webhookRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/payouts', require('./routes/payoutRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

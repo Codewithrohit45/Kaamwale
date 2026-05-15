@@ -89,6 +89,40 @@ const bookingSchema = new mongoose.Schema({
   isEmergency: {
     type: Boolean,
     default: false
+  },
+  rescheduleRequest: {
+    requestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    newDate: Date,
+    newTime: String,
+    reason: String,
+    status: {
+      type: String,
+      enum: ['none', 'pending', 'accepted', 'rejected'],
+      default: 'none'
+    }
+  },
+  workerCount: {
+    type: Number,
+    default: 1
+  },
+  isBulk: {
+    type: Boolean,
+    default: false
+  },
+  customerCoords: {
+    lat: Number,
+    lng: Number
+  },
+  workerCheckInCoords: {
+    lat: Number,
+    lng: Number
+  },
+  isLocationVerified: {
+    type: Boolean,
+    default: false
   }
 }, { timestamps: true });
 

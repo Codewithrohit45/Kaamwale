@@ -5,16 +5,27 @@ const User = require('../models/User');
 // @access  Public
 exports.getProviders = async (req, res) => {
   try {
-    const { category, location, search, minPrice, maxPrice, sortBy } = req.query;
+    const { category, location, search, minPrice, maxPrice, minRating, verifiedOnly, sortBy, lat, lng, radius } = req.query;
 
     let query = { role: 'provider' };
 
-    if (category) {
-      query.category = category;
+    // Geospatial Proximity Search
+    if (lat && lng) {
+      query.locationCoords = {
+        $near: {
+          $geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(lng), parseFloat(lat)]
+          },
+          $maxDistance: parseInt(radius) || 5000 // 5km default
+        }
+      };
+    } else if (location) {
+      query.location = { $regex: location, $options: 'i' };
     }
 
-    if (location) {
-      query.location = { $regex: location, $options: 'i' };
+    if (category) {
+      query.category = category;
     }
 
     if (search) {
@@ -31,12 +42,25 @@ exports.getProviders = async (req, res) => {
       if (maxPrice) query.hourlyRate.$lte = Number(maxPrice);
     }
 
+    // Rating & Verification Filtering
+    if (minRating) {
+      query.rating = { $gte: Number(minRating) };
+    }
+
+    if (verifiedOnly === 'true') {
+      query.isVerified = true;
+    }
+
     // Sorting
-    let sortOptions = {};
-    if (sortBy === 'price_low') sortOptions = { hourlyRate: 1 };
-    else if (sortBy === 'price_high') sortOptions = { hourlyRate: -1 };
-    else if (sortBy === 'rating') sortOptions = { rating: -1, reviewsCount: -1 };
-    else sortOptions = { createdAt: -1 };
+    let sortOptions = { isFeatured: -1 }; // Featured always first
+    if (sortBy === 'price_low') sortOptions.hourlyRate = 1;
+    else if (sortBy === 'price_high') sortOptions.hourlyRate = -1;
+    else if (sortBy === 'rating') {
+      sortOptions.rating = -1;
+      sortOptions.reviewsCount = -1;
+    } else {
+      sortOptions.createdAt = -1;
+    }
 
     const providers = await User.find(query).select('-password').sort(sortOptions);
     res.json(providers);
@@ -193,6 +217,35 @@ exports.getTopProviders = async (req, res) => {
       .sort({ rating: -1, reviewsCount: -1 })
       .limit(6);
     res.json(providers);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Submit KYC documents
+// @route   PUT /api/providers/kyc
+// @access  Private (Provider)
+exports.submitKYC = async (req, res) => {
+  try {
+    const { documentUrl, documentType } = req.body;
+    
+    if (!documentUrl || !documentType) {
+      return res.status(400).json({ message: 'Document URL and type are required' });
+    }
+
+    const provider = await User.findById(req.user.id);
+    if (!provider) return res.status(404).json({ message: 'Provider not found' });
+
+    provider.kyc = {
+      ...provider.kyc,
+      documentUrl,
+      documentType,
+      status: 'pending',
+      submittedAt: new Date()
+    };
+
+    await provider.save();
+    res.json({ message: 'KYC documents submitted successfully', kyc: provider.kyc });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

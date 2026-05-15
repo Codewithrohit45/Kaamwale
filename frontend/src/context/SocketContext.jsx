@@ -13,11 +13,26 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     if (user?.token) {
       const newSocket = io('http://localhost:5000');
       setSocket(newSocket);
+
+      // Fetch initial counts
+      const fetchCounts = async () => {
+        try {
+          const res = await fetch('http://localhost:5000/api/notifications', {
+            headers: { 'Authorization': `Bearer ${user.token}` }
+          });
+          const data = await res.json();
+          if (res.ok) setNotificationCount(data.unreadCount);
+        } catch (err) {
+          console.error('Failed to fetch notifications', err);
+        }
+      };
+      fetchCounts();
 
       newSocket.on('connect', () => {
         newSocket.emit('register', user._id);
@@ -28,7 +43,6 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('newMessage', (data) => {
-        // Increment unread count if not on messages page
         const isMessagePage = window.location.pathname === '/user/messages' || window.location.pathname === '/provider/messages';
         if (!isMessagePage) {
           setUnreadCount(prev => prev + 1);
@@ -38,7 +52,7 @@ export const SocketProvider = ({ children }) => {
 
       newSocket.on('bookingStatusChanged', ({ status }) => {
         addToast(`Booking status updated to ${status}!`, 'success');
-        // Optional: refresh data or trigger a global refresh event
+        setNotificationCount(prev => prev + 1);
       });
 
       return () => newSocket.close();
@@ -51,9 +65,10 @@ export const SocketProvider = ({ children }) => {
   }, [user, addToast]);
 
   const clearUnread = () => setUnreadCount(0);
+  const clearNotifications = () => setNotificationCount(0);
 
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers, unreadCount, clearUnread }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, unreadCount, clearUnread, notificationCount, clearNotifications }}>
       {children}
     </SocketContext.Provider>
   );

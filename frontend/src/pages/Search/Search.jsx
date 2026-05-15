@@ -1,6 +1,7 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FiFilter, FiSearch, FiMapPin, FiList, FiMap } from 'react-icons/fi';
+import { FiFilter, FiSearch, FiMapPin, FiList, FiMap, FiStar } from 'react-icons/fi';
+import { MdVerified } from 'react-icons/md';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import ServiceCard from '../../components/ServiceCard';
@@ -30,10 +31,24 @@ export default function Search() {
   const [category, setCategory] = useState(categoryParam);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [minRating, setMinRating] = useState('');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState('recommended');
+  const [useGPS, setUseGPS] = useState(false);
+  const [userCoords, setUserCoords] = useState(null);
+  const [radius, setRadius] = useState(5000); // 5km
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (useGPS && !userCoords) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => { setUseGPS(false); alert('Location access denied'); }
+      );
+    }
+  }, [useGPS]);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -41,21 +56,27 @@ export default function Search() {
       try {
         let url = 'http://localhost:5000/api/providers?';
         if (category) url += `category=${category}&`;
-        if (location) url += `location=${location}&`;
         if (search) url += `search=${search}&`;
         if (minPrice) url += `minPrice=${minPrice}&`;
         if (maxPrice) url += `maxPrice=${maxPrice}&`;
+        if (minRating) url += `minRating=${minRating}&`;
+        if (verifiedOnly) url += `verifiedOnly=true&`;
         if (sortBy) url += `sortBy=${sortBy}&`;
+        
+        if (useGPS && userCoords) {
+          url += `lat=${userCoords.lat}&lng=${userCoords.lng}&radius=${radius}&`;
+        } else if (location) {
+          url += `location=${location}&`;
+        }
         
         const res = await fetch(url);
         const data = await res.json();
         
-        // Ensure lat/lng exist for map fallback
-        const formattedData = data.map((p, idx) => ({
+        // Map backend locationCoords to lat/lng for Leaflet
+        const formattedData = data.map(p => ({
           ...p,
-          lat: p.lat || 19.0760 + (Math.random() * 0.1 - 0.05), // Mock coords if missing
-          lng: p.lng || 72.8777 + (Math.random() * 0.1 - 0.05),
-          image: p.image || `https://ui-avatars.com/api/?name=${p.name.replace(' ', '+')}&background=random`
+          lat: p.locationCoords?.coordinates[1] || 19.0760,
+          lng: p.locationCoords?.coordinates[0] || 72.8777,
         }));
         
         setProviders(formattedData);
@@ -67,7 +88,7 @@ export default function Search() {
     };
     
     fetchProviders();
-  }, [category, location, search, minPrice, maxPrice, sortBy]);
+  }, [category, location, search, minPrice, maxPrice, sortBy, userCoords, radius, useGPS]);
 
   const filteredProviders = providers; // Filtering is handled by backend now
 
@@ -84,6 +105,36 @@ export default function Search() {
 
             <div className="space-y-6">
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Proximity Search</label>
+                <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">Near Me (GPS)</span>
+                  <button 
+                    onClick={() => setUseGPS(!useGPS)}
+                    className={`w-10 h-6 rounded-full transition-colors relative ${useGPS ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                  >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${useGPS ? 'left-5' : 'left-1'}`}></div>
+                  </button>
+                </div>
+                {useGPS && (
+                  <div className="mt-3 space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                      <span>Radius</span>
+                      <span>{radius / 1000} km</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="1000" 
+                      max="50000" 
+                      step="1000"
+                      value={radius}
+                      onChange={(e) => setRadius(e.target.value)}
+                      className="w-full accent-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
                 <select 
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500"
@@ -92,6 +143,7 @@ export default function Search() {
                 >
                   <option value="">All Categories</option>
                   <option value="Labour">Labour</option>
+                  <option value="Mason">Mason</option>
                   <option value="Plumber">Plumber</option>
                   <option value="Electrician">Electrician</option>
                   <option value="Carpenter">Carpenter</option>
@@ -109,7 +161,8 @@ export default function Search() {
                   <input 
                     type="text" 
                     placeholder="City or Area"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-teal-500"
+                    disabled={useGPS}
+                    className={`w-full pl-9 pr-3 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-teal-500 ${useGPS ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white'}`}
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                   />
@@ -151,8 +204,36 @@ export default function Search() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Min Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4].map(r => (
+                    <button 
+                      key={r}
+                      onClick={() => setMinRating(minRating == r ? '' : r)}
+                      className={`flex-1 py-2 rounded-lg border text-sm font-bold transition-all ${minRating == r ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-500'}`}
+                    >
+                      {r}+ ⭐
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
+                <div className="flex items-center gap-2">
+                  <MdVerified className="text-blue-500" />
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Verified Only</span>
+                </div>
+                <button 
+                  onClick={() => setVerifiedOnly(!verifiedOnly)}
+                  className={`w-10 h-6 rounded-full transition-colors relative ${verifiedOnly ? 'bg-teal-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${verifiedOnly ? 'left-5' : 'left-1'}`}></div>
+                </button>
+              </div>
+
               <button 
-                onClick={() => { setCategory(''); setLocation(''); setMinPrice(''); setMaxPrice(''); setSortBy('recommended'); setSearch(''); }}
+                onClick={() => { setCategory(''); setLocation(''); setMinPrice(''); setMaxPrice(''); setMinRating(''); setVerifiedOnly(false); setSortBy('recommended'); setSearch(''); }}
                 className="w-full py-2 text-sm font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 transition-colors"
               >
                 Reset Filters

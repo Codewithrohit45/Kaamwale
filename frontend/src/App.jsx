@@ -14,6 +14,9 @@ import ProviderOverview from "./pages/Dashboard/ProviderOverview";
 import ProviderAvailability from "./pages/Dashboard/ProviderAvailability";
 import ProviderProfileEdit from "./pages/Dashboard/ProviderProfileEdit";
 import ProviderReviews from "./pages/Dashboard/ProviderReviews";
+import ProviderKYC from "./pages/Dashboard/ProviderKYC";
+import ProviderPackages from "./pages/Dashboard/ProviderPackages";
+import ProviderPayouts from "./pages/Dashboard/ProviderPayouts";
 import UserDashboard from "./pages/Dashboard/UserDashboard";
 import UserProfileEdit from "./pages/Dashboard/UserProfileEdit";
 import Messages from "./pages/Dashboard/Messages";
@@ -22,6 +25,10 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminBookings from "./pages/Admin/AdminBookings";
+import AdminKYC from "./pages/Admin/AdminKYC";
+import AdminAnalytics from "./pages/Admin/AdminAnalytics";
+import AdminPayouts from "./pages/Admin/AdminPayouts";
+import AdminCoupons from "./pages/Admin/AdminCoupons";
 import AdminLogin from "./pages/Admin/AdminLogin";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -45,6 +52,9 @@ function App() {
         <Route path="/provider/availability" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderAvailability /></DashboardLayout></ProtectedRoute>} />
         <Route path="/provider/profile" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderProfileEdit /></DashboardLayout></ProtectedRoute>} />
         <Route path="/provider/reviews" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderReviews /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/provider/kyc" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderKYC /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/provider/packages" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderPackages /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/provider/payouts" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><ProviderPayouts /></DashboardLayout></ProtectedRoute>} />
         <Route path="/provider/messages" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><Messages /></DashboardLayout></ProtectedRoute>} />
         
         {/* User Dashboard Routes */}
@@ -57,6 +67,10 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/users" element={<AdminProtectedRoute><AdminLayout><AdminUsers /></AdminLayout></AdminProtectedRoute>} />
         <Route path="/admin/bookings" element={<AdminProtectedRoute><AdminLayout><AdminBookings /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/kyc" element={<AdminProtectedRoute><AdminLayout><AdminKYC /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminLayout><AdminAnalytics /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/payouts" element={<AdminProtectedRoute><AdminLayout><AdminPayouts /></AdminLayout></AdminProtectedRoute>} />
+        <Route path="/admin/coupons" element={<AdminProtectedRoute><AdminLayout><AdminCoupons /></AdminLayout></AdminProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

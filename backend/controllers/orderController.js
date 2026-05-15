@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const User = require('../models/User');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const Coupon = require('../models/Coupon');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -14,7 +15,7 @@ const razorpay = new Razorpay({
 // @access  Private (User)
 exports.createOrder = async (req, res) => {
   try {
-    const { bookingId } = req.body;
+    const { bookingId, couponCode } = req.body;
 
     const booking = await Booking.findById(bookingId);
     if (!booking) {
@@ -25,8 +26,25 @@ exports.createOrder = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
+    let finalPrice = booking.totalPrice;
+    let discountAmount = 0;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ 
+        code: couponCode.toUpperCase(), 
+        isActive: true, 
+        expiryDate: { $gte: new Date() } 
+      });
+      if (coupon) {
+        discountAmount = Math.min((finalPrice * coupon.discountPercentage) / 100, coupon.maxDiscount);
+        finalPrice -= discountAmount;
+        coupon.usageCount += 1;
+        await coupon.save();
+      }
+    }
+
     // Razorpay amount is in paise (1 INR = 100 paise)
-    const amountInPaise = Math.round(booking.totalPrice * 100);
+    const amountInPaise = Math.round(finalPrice * 100);
     const receipt = `receipt_${bookingId.substring(0, 10)}_${Date.now()}`;
 
     const options = {
@@ -42,7 +60,7 @@ exports.createOrder = async (req, res) => {
       user: req.user.id,
       provider: booking.provider,
       booking: bookingId,
-      amount: booking.totalPrice,
+      amount: finalPrice,
       currency: 'INR',
       receipt,
       orderId: rzpOrder.id, // Razorpay Order ID
@@ -109,8 +127,32 @@ exports.getMyOrders = async (req, res) => {
       .populate('provider', 'name category')
       .populate('booking', 'date time status totalPrice')
       .sort({ createdAt: -1 });
-    res.json(orders);
+    res.json({ orders });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Process refund via Razorpay
+// @access  Internal/Controller
+exports.processRefund = async (bookingId, reason = 'Cancelled by system') => {
+  try {
+    const order = await Order.findOne({ booking: bookingId, status: 'paid' });
+    if (!order) return { success: false, message: 'No paid order found' };
+
+    const refund = await razorpay.payments.refund(order.paymentId, {
+      amount: Math.round(order.amount * 100), // Full refund
+      notes: { reason, bookingId: bookingId.toString() }
+    });
+
+    order.status = 'refunded';
+    await order.save();
+
+    await Booking.findByIdAndUpdate(bookingId, { paymentStatus: 'refunded' });
+
+    return { success: true, refundId: refund.id };
+  } catch (error) {
+    console.error('Razorpay Refund Error:', error);
+    return { success: false, error: error.message };
   }
 };

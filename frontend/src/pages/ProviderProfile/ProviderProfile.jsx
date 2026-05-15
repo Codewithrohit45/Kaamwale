@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useContext } from 'react';
 import { FiStar, FiClock, FiCheckCircle, FiPhone, FiMessageCircle, FiCalendar, FiMapPin } from 'react-icons/fi';
+import { MdVerified } from 'react-icons/md';
 import Button from '../../components/Button';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -100,6 +101,13 @@ export default function ProviderProfile() {
             <div className="w-40 h-40 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white dark:border-slate-800 shadow-lg bg-slate-200 -mt-20 md:-mt-32 mb-6">
               <img src={provider.image || defaultImage} alt={provider.name} className="w-full h-full object-cover" />
             </div>
+
+            {provider.isVerified && (
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold mb-3 border border-blue-100 dark:border-blue-800">
+                <MdVerified size={14} /> VERIFIED PROFESSIONAL
+              </div>
+            )}
+
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white text-center mb-1">{provider.name}</h1>
             <p className="text-teal-600 dark:text-teal-400 font-semibold mb-4">{provider.category}</p>
 
@@ -159,6 +167,31 @@ export default function ProviderProfile() {
                 Experienced and reliable {provider.category} professional ready to help with your tasks. I ensure top quality service and customer satisfaction.
               </p>
             </div>
+
+            {provider.packages && provider.packages.length > 0 && (
+              <div className="mb-10">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Service Packages</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {provider.packages.map((pkg, i) => (
+                    <div key={i} className="bg-white dark:bg-slate-800 border-2 border-teal-50 dark:border-teal-900/30 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="font-bold text-lg text-slate-800 dark:text-white">{pkg.name}</h3>
+                        <span className="text-teal-600 dark:text-teal-400 font-bold text-xl">₹{pkg.price}</span>
+                      </div>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{pkg.description}</p>
+                      <ul className="space-y-2">
+                        {pkg.features.map((f, fi) => (
+                          <li key={fi} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                            <FiCheckCircle className="text-teal-500 shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mb-8">
               <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Skills & Specialties</h2>

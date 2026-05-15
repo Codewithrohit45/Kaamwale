@@ -16,7 +16,7 @@ export default function Login() {
   const toast = useToast();
   const { login } = useContext(AuthContext);
 
-  const from = location.state?.from?.pathname || (role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
+  const from = location.state?.from || (role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
   const message = location.state?.message;
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useContext } from 'react';
 import Button from '../../components/Button';
 import { FiUser, FiMail, FiLock, FiPhone, FiUploadCloud, FiKey } from 'react-icons/fi';
@@ -8,7 +8,10 @@ export default function Signup() {
   const [searchParams] = useSearchParams();
   const role = searchParams.get('role') || 'user';
   const navigate = useNavigate();
+  const location = useLocation();
   const { register, sendOtp } = useContext(AuthContext);
+
+  const from = location.state?.from || (role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
 
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
@@ -66,7 +69,7 @@ export default function Signup() {
           hourlyRate: formData.rate,
           otp: formData.otp
         });
-        navigate(role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
+        navigate(from, { replace: true });
       } catch (err) {
         setError(err.message || 'Registration failed');
       } finally {

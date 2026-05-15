@@ -1,5 +1,5 @@
 import { useState, useContext, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { FiLock, FiMail } from "react-icons/fi";
 
@@ -10,6 +10,9 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login, user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from || "/admin/dashboard";
 
   useEffect(() => {
     // If already logged in as admin, redirect to dashboard
@@ -33,7 +36,7 @@ const AdminLogin = () => {
         window.location.reload(); 
         return;
       }
-      navigate("/admin/dashboard");
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || "Invalid credentials. Please try again.");
     } finally {

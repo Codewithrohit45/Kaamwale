@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FiHome, FiCalendar, FiDollarSign, FiUser, FiSettings, FiLogOut, FiMenu, FiX, FiMessageSquare, FiStar } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiDollarSign, FiUser, FiSettings, FiLogOut, FiMenu, FiX, FiMessageSquare, FiStar, FiShield, FiPackage } from 'react-icons/fi';
 import { useState } from 'react';
 
 export default function DashboardLayout({ children, role = 'provider' }) {
@@ -10,6 +10,9 @@ export default function DashboardLayout({ children, role = 'provider' }) {
     { name: 'Overview', path: '/provider/dashboard', icon: <FiHome /> },
     { name: 'Availability', path: '/provider/availability', icon: <FiCalendar /> },
     { name: 'Messages', path: '/provider/messages', icon: <FiMessageSquare /> },
+    { name: 'Verification', path: '/provider/kyc', icon: <FiShield /> },
+    { name: 'Packages', path: '/provider/packages', icon: <FiPackage /> },
+    { name: 'Payouts', path: '/provider/payouts', icon: <FiDollarSign /> },
     { name: 'Reviews', path: '/provider/reviews', icon: <FiStar /> },
     { name: 'Profile', path: '/provider/profile', icon: <FiUser /> },
   ];

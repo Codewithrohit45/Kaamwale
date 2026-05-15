@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { FiDollarSign, FiCalendar, FiStar, FiTrendingUp } from 'react-icons/fi';
+import { FiDollarSign, FiCalendar, FiStar, FiTrendingUp, FiMapPin } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 
@@ -32,6 +32,20 @@ export default function ProviderOverview() {
   }, [user]);
 
   const handleUpdateStatus = async (id, newStatus) => {
+    let workerCoords = null;
+
+    if (newStatus === 'in-progress') {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+        });
+        workerCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (err) {
+        alert('Location access is required to start work. Please enable GPS.');
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`http://localhost:5000/api/bookings/${id}/status`, {
         method: 'PUT',
@@ -39,7 +53,7 @@ export default function ProviderOverview() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`
         },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, workerCoords })
       });
       if (res.ok) {
         const booking = bookings.find(b => b._id === id);
@@ -100,13 +114,16 @@ export default function ProviderOverview() {
   const pendingRequests = bookings.filter(b => b.status === 'pending');
   const upcomingJobs = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress');
   const completedJobs = bookings.filter(b => b.status === 'completed');
-  const totalEarnings = completedJobs.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+  
+  // Real earnings from backend user object if available, otherwise calculate
+  const totalEarningsVal = user?.totalEarnings || completedJobs.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+  const withdrawableVal = user?.withdrawableBalance || 0;
 
   const stats = [
-    { label: 'Total Earnings', value: `₹${totalEarnings.toLocaleString()}`, icon: <FiDollarSign size={24} />, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
-    { label: 'Jobs Completed', value: completedJobs.length.toString(), icon: <FiCalendar size={24} />, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-    { label: 'Rating', value: completedJobs.length > 0 ? '⭐' : 'New', icon: <FiStar size={24} />, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' },
-    { label: 'Total Bookings', value: bookings.length.toString(), icon: <FiTrendingUp size={24} />, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' },
+    { label: 'Total Earnings', value: `₹${totalEarningsVal.toLocaleString()}`, icon: <FiDollarSign size={24} />, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
+    { label: 'Withdrawable', value: `₹${withdrawableVal.toLocaleString()}`, icon: <FiDollarSign size={24} />, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' },
+    { label: 'Rating', value: user?.rating?.toString() || 'New', icon: <FiStar size={24} />, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' },
+    { label: 'Jobs Completed', value: user?.completedBookings?.toString() || completedJobs.length.toString(), icon: <FiCalendar size={24} />, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
   ];
 
   if (loading) {
@@ -211,6 +228,33 @@ export default function ProviderOverview() {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Business Intelligence Section */}
+      <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-3xl p-8 text-white shadow-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <FiTrendingUp size={28} />
+          <h2 className="text-2xl font-bold">Business Intelligence</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+            <p className="text-indigo-100 text-sm font-medium mb-1">Completion Rate</p>
+            <p className="text-4xl font-bold">
+              {bookings.length > 0 ? Math.round((completedJobs.length / bookings.length) * 100) : 0}%
+            </p>
+            <p className="text-indigo-200 text-xs mt-2">Percentage of jobs finished successfully</p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+            <p className="text-indigo-100 text-sm font-medium mb-1">Reliability Score</p>
+            <p className="text-4xl font-bold">{user?.reliabilityScore || 0}%</p>
+            <p className="text-indigo-200 text-xs mt-2">Based on your response and completion time</p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+            <p className="text-indigo-100 text-sm font-medium mb-1">Repeat Customers</p>
+            <p className="text-4xl font-bold">{user?.repeatCustomerRate || 0}%</p>
+            <p className="text-indigo-200 text-xs mt-2">Clients who booked you more than once</p>
           </div>
         </div>
       </div>

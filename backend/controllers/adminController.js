@@ -1,5 +1,8 @@
 const User = require('../models/User');
 const Booking = require('../models/Booking');
+const Coupon = require('../models/Coupon');
+const Notification = require('../models/Notification');
+const { processRefund } = require('./orderController');
 
 // @desc    Get all users and providers
 // @route   GET /api/admin/users
@@ -135,12 +138,34 @@ const resolveDispute = async (req, res) => {
     if (status === 'resolved') {
       // If valid dispute, mark booking as cancelled or refund needed
       booking.status = 'cancelled';
-      booking.paymentStatus = 'refunded';
+      if (booking.paymentStatus === 'paid') {
+        await processRefund(booking._id, 'Admin resolved dispute');
+      } else {
+        booking.paymentStatus = 'refunded';
+      }
     } else {
       // If dismissed, keep status as is (usually in-progress or completed)
     }
 
     await booking.save();
+
+    // Notify both parties
+    await Notification.create({
+      recipient: booking.user,
+      title: 'Dispute Resolved',
+      message: `Your dispute for booking #${booking._id.toString().slice(-6)} has been ${status}. Resolution: ${resolution}`,
+      type: 'dispute',
+      link: '/user/dashboard'
+    });
+
+    await Notification.create({
+      recipient: booking.provider,
+      title: 'Dispute Resolved',
+      message: `The dispute for booking #${booking._id.toString().slice(-6)} has been ${status}. Resolution: ${resolution}`,
+      type: 'dispute',
+      link: '/provider/dashboard'
+    });
+
     res.json({ message: 'Dispute resolved successfully', booking });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -165,6 +190,125 @@ const toggleVerification = async (req, res) => {
   }
 };
 
+// @desc    Review provider KYC
+// @route   PUT /api/admin/users/:id/kyc
+// @access  Private/Admin
+const reviewKYC = async (req, res) => {
+  try {
+    const { status, rejectedReason } = req.body;
+    const user = await User.findById(req.params.id);
+    
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.role !== 'provider') return res.status(400).json({ message: 'KYC only applies to providers' });
+
+    user.kyc.status = status;
+    user.kyc.reviewedAt = new Date();
+    
+    if (status === 'rejected') {
+      user.kyc.rejectedReason = rejectedReason;
+      user.isVerified = false;
+    } else if (status === 'verified') {
+      user.isVerified = true;
+      user.kyc.rejectedReason = '';
+    }
+
+    await user.save();
+    res.json({ message: `KYC ${status} successfully`, kyc: user.kyc, isVerified: user.isVerified });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get detailed platform analytics
+// @route   GET /api/admin/analytics
+// @access  Private/Admin
+const getAnalytics = async (req, res) => {
+  try {
+    const Order = require('../models/Order');
+    
+    // 1. Total Revenue
+    const orders = await Order.find({ status: 'paid' });
+    const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
+
+    // 2. Bookings by Category
+    const bookings = await Booking.find().populate('provider', 'category');
+    const categoryStats = {};
+    bookings.forEach(b => {
+      const cat = b.provider?.category || 'Other';
+      categoryStats[cat] = (categoryStats[cat] || 0) + 1;
+    });
+
+    const categoryData = Object.keys(categoryStats).map(name => ({
+      name,
+      value: categoryStats[name]
+    }));
+
+    // 3. Monthly Trends (last 6 months)
+    const monthlyData = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthName = d.toLocaleString('default', { month: 'short' });
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+
+      const count = await Booking.countDocuments({
+        createdAt: { $gte: start, $lte: end }
+      });
+
+      monthlyData.push({ month: monthName, bookings: count });
+    }
+
+    res.json({
+      totalRevenue,
+      categoryData,
+      monthlyData,
+      activeUsers: await User.countDocuments({ role: 'user' }),
+      activeProviders: await User.countDocuments({ role: 'provider' })
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all coupons
+// @route   GET /api/admin/coupons
+// @access  Private/Admin
+const getCoupons = async (req, res) => {
+  try {
+    const coupons = await Coupon.find().sort({ createdAt: -1 });
+    res.json(coupons);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Create new coupon
+// @route   POST /api/admin/coupons
+// @access  Private/Admin
+const createCoupon = async (req, res) => {
+  try {
+    const { code, discountPercentage, maxDiscount, expiryDate } = req.body;
+    const coupon = await Coupon.create({ code: code.toUpperCase(), discountPercentage, maxDiscount, expiryDate });
+    res.status(201).json(coupon);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update coupon
+// @route   PUT /api/admin/coupons/:id
+// @access  Private/Admin
+const updateCoupon = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const coupon = await Coupon.findByIdAndUpdate(req.params.id, { isActive }, { new: true });
+    res.json(coupon);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   deleteUser,
@@ -172,5 +316,10 @@ module.exports = {
   adminCancelBooking,
   getAdminStats,
   resolveDispute,
-  toggleVerification
+  toggleVerification,
+  reviewKYC,
+  getAnalytics,
+  getCoupons,
+  createCoupon,
+  updateCoupon
 };

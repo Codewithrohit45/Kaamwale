@@ -6,7 +6,7 @@ const Booking = require('./models/Booking');
 
 dotenv.config();
 
-const categories = ['Labour', 'Plumber', 'Electrician', 'Carpenter', 'Tutor', 'Painter', 'Mechanic', 'AC Repair'];
+const categories = ['Labour', 'Mason', 'Plumber', 'Electrician', 'Carpenter', 'Tutor', 'Painter', 'Mechanic', 'AC Repair'];
 const locations = ['Andheri East, Mumbai', 'Bandra West, Mumbai', 'Dadar, Mumbai', 'Worli, Mumbai', 'Juhu, Mumbai', 'Powai, Mumbai', 'Goregaon, Mumbai', 'Malad, Mumbai', 'Koramangala, Bengaluru', 'Indiranagar, Bengaluru', 'Lajpat Nagar, Delhi', 'Connaught Place, Delhi'];
 
 const firstNames = ['Rajesh', 'Suresh', 'Amit', 'Ramesh', 'Priya', 'Dinesh', 'Vikram', 'Neha', 'Arun', 'Pooja', 'Rahul', 'Anjali', 'Karan', 'Sneha', 'Mohan', 'Anita'];
@@ -20,7 +20,8 @@ const providerImages = {
   Tutor: ['https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1580894732444-8ecded790047?w=400&h=400&fit=crop'],
   Painter: ['https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=400&h=400&fit=crop'],
   Mechanic: ['https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1530046339160-ce3e530c7d2f?w=400&h=400&fit=crop'],
-  'AC Repair': ['https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?w=400&h=400&fit=crop']
+  'AC Repair': ['https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400&h=400&fit=crop', 'https://images.unsplash.com/photo-1581092334651-ddf26d9a09d0?w=400&h=400&fit=crop'],
+  Mason: ['https://images.unsplash.com/photo-1590684153400-e3e7a999b1cf?w=400&h=400&fit=crop']
 };
 
 const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -64,7 +65,16 @@ const generateUsers = async () => {
         location: getRandom(locations),
         rating: (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1),
         reviewsCount: getRandomInt(10, 500),
-        image: getRandom(providerImages[category])
+        image: getRandom(providerImages[category]),
+        locationCoords: {
+          type: 'Point',
+          coordinates: (() => {
+            const loc = getRandom(locations);
+            if (loc.includes('Mumbai')) return [72.8 + (Math.random() * 0.1 - 0.05), 19.0 + (Math.random() * 0.1 - 0.05)];
+            if (loc.includes('Bengaluru')) return [77.5 + (Math.random() * 0.1 - 0.05), 12.9 + (Math.random() * 0.1 - 0.05)];
+            return [77.2 + (Math.random() * 0.1 - 0.05), 28.6 + (Math.random() * 0.1 - 0.05)]; // Delhi
+          })()
+        }
       });
     }
   }
@@ -82,7 +92,7 @@ const generateBookings = (insertedUsers) => {
   for (let i = 0; i < 100; i++) {
     const user = getRandom(standardUsers);
     const provider = getRandom(providers);
-    
+
     // Random date within the last 30 days or next 15 days
     const date = new Date();
     date.setDate(date.getDate() + getRandomInt(-30, 15));
@@ -105,7 +115,7 @@ const seedDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB Connected for Large Data Seeding...');
-    
+
     console.log('Clearing existing data...');
     await User.deleteMany();
     await Booking.deleteMany();
@@ -122,7 +132,7 @@ const seedDB = async () => {
 
     console.log('Database Seeded Successfully with Large Demo Data!');
     process.exit();
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     process.exit(1);
   }

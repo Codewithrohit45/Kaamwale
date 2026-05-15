@@ -16,6 +16,9 @@ export default function Booking() {
   const [time, setTime] = useState('');
   const [address, setAddress] = useState('');
   const [estimatedHours, setEstimatedHours] = useState(2);
+  const [workerCount, setWorkerCount] = useState(1);
+  const [isEmergency, setIsEmergency] = useState(false);
+  const [customerCoords, setCustomerCoords] = useState(null);
   
   const [provider, setProvider] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +30,15 @@ export default function Booking() {
     if (!user) {
       navigate('/login');
       return;
+    }
+
+    // Capture location for geofencing
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setCustomerCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => console.warn('Location access denied'),
+        { enableHighAccuracy: true }
+      );
     }
 
     const fetchProvider = async () => {
@@ -68,6 +80,9 @@ export default function Booking() {
           date,
           time,
           estimatedHours,
+          workerCount,
+          isEmergency,
+          customerCoords,
           notes: ''
         })
       });
@@ -139,6 +154,15 @@ export default function Booking() {
                     value={date} 
                     onChange={(e) => { setDate(e.target.value); setTime(''); }} 
                   />
+                  {customerCoords ? (
+                    <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-1 flex items-center gap-1">
+                      <FiMapPin size={10} /> GPS LOCATION CAPTURED
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-amber-600 font-bold mt-1">
+                      ⚠️ Enable GPS for better verification
+                    </p>
+                  )}
                   {isDateBlocked && (
                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
                       ⚠️ This provider is unavailable on the selected date.
@@ -197,11 +221,34 @@ export default function Booking() {
                     onChange={(e) => setAddress(e.target.value)}
                   ></textarea>
                 </div>
-                <div className="flex gap-4">
-                  <Button variant="outline" className="flex-1 py-3" onClick={() => setStep(1)} disabled={submitting}>Back</Button>
-                  <Button variant="primary" className="flex-1 py-3" onClick={handleConfirmBooking} disabled={!address || submitting}>
-                    {submitting ? 'Confirming...' : 'Confirm Booking'}
+                <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-6 space-y-4">
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>Service Fee ({estimatedHours} hrs × {workerCount} {workerCount > 1 ? 'workers' : 'worker'})</span>
+                    <span className="font-bold text-slate-800 dark:text-white">₹{(provider.hourlyRate * estimatedHours * workerCount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                    <span>Platform Fee</span>
+                    <span className="font-bold text-slate-800 dark:text-white">₹50</span>
+                  </div>
+                  {isEmergency && (
+                    <div className="flex justify-between text-red-600 font-bold">
+                      <span>Emergency Priority</span>
+                      <span>+ ₹100</span>
+                    </div>
+                  )}
+                  <div className="flex gap-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                    <Button variant="outline" className="flex-1 py-3" onClick={() => setStep(1)} disabled={submitting}>Back</Button>
+                    <div className="flex-[2] text-right">
+                      <p className="text-sm font-medium text-slate-500">Total Amount</p>
+                      <p className="text-3xl font-black text-teal-600">₹{(provider.hourlyRate * estimatedHours * workerCount + 50 + (isEmergency ? 100 : 0)).toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <Button variant="primary" className="w-full py-4 mt-2" onClick={handleConfirmBooking} disabled={submitting || !address}>
+                    {submitting ? 'Processing...' : 'Confirm & Book Now'}
                   </Button>
+                  <p className="text-[10px] text-slate-400 text-center mt-2">
+                    * Final platform fee may vary based on service category and location.
+                  </p>
                 </div>
               </div>
             )}
@@ -225,6 +272,22 @@ export default function Booking() {
                 <span>Hourly Rate</span>
                 <span className="font-medium text-slate-800 dark:text-white">₹{provider.hourlyRate || 300}</span>
               </div>
+              
+              {/* Bulk Hiring - Show for Labour/Mason */}
+              {['Labour', 'Mason'].includes(provider.category) && (
+                <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col">
+                    <span>Number of Workers</span>
+                    <span className="text-[10px] text-teal-600 font-bold">BULK HIRING</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setWorkerCount(Math.max(1, workerCount - 1))} className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white flex items-center justify-center font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">-</button>
+                    <span className="font-bold text-slate-800 dark:text-white w-8 text-center">{workerCount}</span>
+                    <button onClick={() => setWorkerCount(Math.min(20, workerCount + 1))} className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white flex items-center justify-center font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">+</button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
                 <span>Estimated Hours</span>
                 <div className="flex items-center gap-2">
@@ -233,6 +296,21 @@ export default function Booking() {
                   <button onClick={() => setEstimatedHours(Math.min(8, estimatedHours + 1))} className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-white flex items-center justify-center font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">+</button>
                 </div>
               </div>
+
+              {/* Emergency Service */}
+              <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                <div className="flex flex-col">
+                  <span>Emergency Priority</span>
+                  <span className="text-[10px] text-red-500 font-bold">QUICK RESPONSE</span>
+                </div>
+                <button 
+                  onClick={() => setIsEmergency(!isEmergency)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${isEmergency ? 'bg-red-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${isEmergency ? 'left-7' : 'left-1'}`}></div>
+                </button>
+              </div>
+
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Platform Fee</span>
                 <span className="font-medium text-slate-800 dark:text-white">₹50</span>
@@ -241,7 +319,7 @@ export default function Booking() {
             
             <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center mb-6">
               <span className="font-bold text-slate-800 dark:text-white">Total Est.</span>
-              <span className="font-bold text-xl text-teal-600 dark:text-teal-400">₹{((provider.hourlyRate || 300) * estimatedHours) + 50}</span>
+              <span className="font-bold text-xl text-teal-600 dark:text-teal-400">₹{((provider.hourlyRate || 300) * estimatedHours * workerCount) + 50}</span>
             </div>
 
             <div className="bg-teal-50 dark:bg-teal-900/10 p-4 rounded-xl flex items-center gap-3 text-teal-700 dark:text-teal-400 text-xs font-medium">

@@ -5,6 +5,7 @@ import './index.css'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './components/NotificationToast'
 import { SocketProvider } from './context/SocketContext'
+import './i18n'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

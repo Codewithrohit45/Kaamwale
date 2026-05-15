@@ -21,6 +21,7 @@ export default function UserDashboard() {
   const [disputeModal, setDisputeModal] = useState(null); // booking id for dispute
   const [disputeData, setDisputeData] = useState({ reason: '', details: '' });
   const [disputeSubmitting, setDisputeSubmitting] = useState(false);
+  const [showOtp, setShowOtp] = useState(null); // { id, otp }
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -184,6 +185,21 @@ export default function UserDashboard() {
     }
   };
 
+  const handleApproveWork = async (bookingId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${bookingId}/approve-work`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${user.token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowOtp({ id: bookingId, otp: data.otp });
+      }
+    } catch (err) {
+      console.error('Approve failed', err);
+    }
+  };
+
   const filteredBookings = filter === 'all' ? bookings : bookings.filter(b => b.status === filter);
 
   const getStatusStyle = (status) => {
@@ -287,6 +303,21 @@ export default function UserDashboard() {
                           <FiCheckCircle size={10} /> PAID
                         </span>
                       )}
+                      {booking.paymentStatus === 'refunded' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded mt-1">
+                          <FiXCircle size={10} /> REFUNDED
+                        </span>
+                      )}
+                      {booking.isEmergency && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded mt-1 ml-2 animate-pulse">
+                          🚨 EMERGENCY
+                        </span>
+                      )}
+                      {booking.isLocationVerified && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 px-1.5 py-0.5 rounded mt-1 ml-2">
+                          <FiMapPin size={10} /> VERIFIED LOCATION
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -324,6 +355,14 @@ export default function UserDashboard() {
                         <FiStar size={14} /> {booking.rating}/5
                       </span>
                     )}
+                    {booking.status === 'in-progress' && booking.otpRequested && (
+                      <button
+                        onClick={() => handleApproveWork(booking._id)}
+                        className="px-3 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 transition-colors text-sm"
+                      >
+                        Approve Work
+                      </button>
+                    )}
                     {['pending', 'accepted'].includes(booking.status) && (
                       <>
                         {booking.paymentStatus !== 'paid' && (
@@ -342,6 +381,19 @@ export default function UserDashboard() {
                           Cancel
                         </button>
                       </>
+                    )}
+                    {['in-progress', 'completed'].includes(booking.status) && !booking.dispute?.isRaised && (
+                      <button
+                        onClick={() => setDisputeModal(booking._id)}
+                        className="px-3 py-2 bg-white dark:bg-slate-700 border border-red-500 text-red-500 font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors text-sm"
+                      >
+                        Raise Dispute
+                      </button>
+                    )}
+                    {booking.dispute?.isRaised && (
+                      <span className="text-xs font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-full">
+                        DISPUTED
+                      </span>
                     )}
                   </div>
                 </div>
@@ -442,6 +494,26 @@ export default function UserDashboard() {
                 {disputeSubmitting ? 'Raising...' : 'Raise Dispute'}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* OTP Modal */}
+      {showOtp && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 w-full max-w-sm shadow-2xl text-center border border-slate-200 dark:border-slate-700 animate-in fade-in zoom-in duration-300">
+            <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FiCheckCircle size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Work Approved!</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">Please share this completion OTP with the worker to finalize the payment.</p>
+            <div className="bg-slate-100 dark:bg-slate-900 py-4 rounded-2xl mb-8">
+              <span className="text-4xl font-black tracking-[12px] text-teal-600 dark:text-teal-400 ml-3">
+                {showOtp.otp}
+              </span>
+            </div>
+            <Button variant="primary" className="w-full py-3" onClick={() => setShowOtp(null)}>
+              Got it
+            </Button>
           </div>
         </div>
       )}
