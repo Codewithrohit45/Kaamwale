@@ -26,8 +26,8 @@ export default function Signup() {
     setError('');
     setLoading(true);
     try {
-      await sendOtp(formData.email);
-      setSuccess('OTP sent successfully to your email!');
+      await sendOtp(formData.email, formData.phone);
+      setSuccess(`OTP sent successfully to ${formData.email} ${formData.phone ? '& ' + formData.phone : ''}!`);
       setStep(role === 'provider' ? 4 : 2); // Jump to OTP step
     } catch (err) {
       setError(err.message || 'Failed to send OTP');
@@ -152,6 +152,14 @@ export default function Signup() {
                   placeholder="Password" value={formData.password} onChange={handleChange}
                 />
               </div>
+              <div className="relative">
+                <FiPhone className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+                <input
+                  name="phone" type="tel" required
+                  className="w-full pl-10 px-3 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-teal-500"
+                  placeholder="Mobile Number" value={formData.phone} onChange={handleChange}
+                />
+              </div>
             </div>
           )}
 
@@ -185,14 +193,6 @@ export default function Signup() {
           {step === 3 && role === 'provider' && (
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800 dark:text-white">Verification</h3>
-              <div className="relative">
-                <FiPhone className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-                <input
-                  name="phone" type="tel" required
-                  className="w-full pl-10 px-3 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white/80 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-teal-500"
-                  placeholder="Phone Number" value={formData.phone} onChange={handleChange}
-                />
-              </div>
               <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
                 <FiUploadCloud size={32} className="mx-auto text-teal-500 mb-2" />
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Upload Govt ID (Aadhar/PAN)</p>
@@ -205,7 +205,7 @@ export default function Signup() {
           {((role === 'provider' && step === 4) || (role === 'user' && step === 2)) && (
             <div className="space-y-4">
               <h3 className="font-bold text-slate-800 dark:text-white text-center">Enter OTP</h3>
-              <p className="text-sm text-slate-500 text-center mb-4">We sent a 6-digit code to {formData.email}</p>
+              <p className="text-sm text-slate-500 text-center mb-4">We sent a 6-digit code to {formData.email} & {formData.phone}</p>
               <div className="relative">
                 <FiKey className="absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
                 <input

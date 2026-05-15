@@ -1,9 +1,11 @@
 import { useContext } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import { useSocket } from "../../context/SocketContext";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
+  const { unreadCount } = useSocket();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -33,14 +35,23 @@ const Navbar = () => {
           {user ? (
             <>
               {user.role === 'admin' && (
-                 <Link to="/admin/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Admin Dashboard</Link>
+                <Link to="/admin/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Admin Dashboard</Link>
               )}
               {user.role === 'provider' && (
-                 <Link to="/provider/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Dashboard</Link>
+                <Link to="/provider/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Dashboard</Link>
               )}
               {user.role === 'user' && (
-                 <Link to="/user/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Dashboard</Link>
+                <Link to="/user/dashboard" className="hover:text-cyan-400 transition duration-300 text-lg">Dashboard</Link>
               )}
+
+              <Link to={user.role === 'provider' ? '/provider/messages' : '/user/messages'} className="relative hover:text-cyan-400 transition duration-300 text-lg">
+                Messages
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                    {unreadCount}
+                  </span>
+                )}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="bg-red-500 text-white px-6 py-2 rounded-xl font-bold hover:bg-red-400 transition duration-300"

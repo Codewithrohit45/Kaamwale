@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiFilter, FiSearch, FiMapPin, FiList, FiMap } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -28,6 +28,9 @@ export default function Search() {
   const [search, setSearch] = useState(q);
   const [location, setLocation] = useState(loc);
   const [category, setCategory] = useState(categoryParam);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('recommended');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'map'
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +43,9 @@ export default function Search() {
         if (category) url += `category=${category}&`;
         if (location) url += `location=${location}&`;
         if (search) url += `search=${search}&`;
+        if (minPrice) url += `minPrice=${minPrice}&`;
+        if (maxPrice) url += `maxPrice=${maxPrice}&`;
+        if (sortBy) url += `sortBy=${sortBy}&`;
         
         const res = await fetch(url);
         const data = await res.json();
@@ -61,7 +67,7 @@ export default function Search() {
     };
     
     fetchProviders();
-  }, [category, location, search]);
+  }, [category, location, search, minPrice, maxPrice, sortBy]);
 
   const filteredProviders = providers; // Filtering is handled by backend now
 
@@ -111,14 +117,46 @@ export default function Search() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Price Range (₹/hr)</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="number" 
+                    placeholder="Min"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                  />
+                  <span className="text-slate-400">-</span>
+                  <input 
+                    type="number" 
+                    placeholder="Max"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Sort By</label>
-                <select className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500">
-                  <option>Recommended</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Rating</option>
+                <select 
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="recommended">Recommended</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                  <option value="rating">Top Rated</option>
                 </select>
               </div>
+
+              <button 
+                onClick={() => { setCategory(''); setLocation(''); setMinPrice(''); setMaxPrice(''); setSortBy('recommended'); setSearch(''); }}
+                className="w-full py-2 text-sm font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300 transition-colors"
+              >
+                Reset Filters
+              </button>
             </div>
           </div>
         </div>
@@ -160,7 +198,7 @@ export default function Search() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {filteredProviders.length > 0 ? (
                 filteredProviders.map(provider => (
-                  <ServiceCard key={provider.id} provider={provider} />
+                  <ServiceCard key={provider._id || provider.id} provider={provider} />
                 ))
               ) : (
                 <div className="col-span-full py-12 text-center text-slate-500 dark:text-slate-400">

@@ -23,11 +23,11 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4">Services</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/search?category=Labour" className="hover:text-teal-400 transition-colors">Labour</Link></li>
-              <li><Link to="/search?category=Plumber" className="hover:text-teal-400 transition-colors">Plumber</Link></li>
-              <li><Link to="/search?category=Electrician" className="hover:text-teal-400 transition-colors">Electrician</Link></li>
-              <li><Link to="/search?category=Carpenter" className="hover:text-teal-400 transition-colors">Carpenter</Link></li>
-              <li><Link to="/search?category=Tutor" className="hover:text-teal-400 transition-colors">Tutor</Link></li>
+              <li><Link to="/category/labour" className="hover:text-teal-400 transition-colors">Labour</Link></li>
+              <li><Link to="/category/plumber" className="hover:text-teal-400 transition-colors">Plumber</Link></li>
+              <li><Link to="/category/electrician" className="hover:text-teal-400 transition-colors">Electrician</Link></li>
+              <li><Link to="/category/carpenter" className="hover:text-teal-400 transition-colors">Carpenter</Link></li>
+              <li><Link to="/category/tutor" className="hover:text-teal-400 transition-colors">Tutor</Link></li>
             </ul>
           </div>
 

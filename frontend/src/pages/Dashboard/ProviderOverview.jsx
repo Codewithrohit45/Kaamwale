@@ -1,9 +1,11 @@
 import { useState, useEffect, useContext } from 'react';
 import { FiDollarSign, FiCalendar, FiStar, FiTrendingUp } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 
 export default function ProviderOverview() {
   const { user } = useContext(AuthContext);
+  const { socket } = useSocket();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +42,10 @@ export default function ProviderOverview() {
         body: JSON.stringify({ status: newStatus })
       });
       if (res.ok) {
-        // Update local state
+        const booking = bookings.find(b => b._id === id);
+        if (booking && socket) {
+          socket.emit('bookingUpdate', { receiverId: booking.user._id, bookingId: id, status: newStatus });
+        }
         setBookings(bookings.map(b => b._id === id ? { ...b, status: newStatus } : b));
       }
     } catch (error) {
@@ -48,15 +53,60 @@ export default function ProviderOverview() {
     }
   };
 
+  const handleRequestCompletion = async (id) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${id}/request-completion`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${user?.token}`
+        }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`Completion OTP sent to customer! (${data.phone})`);
+        setBookings(bookings.map(b => b._id === id ? { ...b, otpRequested: true } : b));
+      }
+    } catch (error) {
+      console.error('Failed to request completion', error);
+    }
+  };
+
+  const handleVerifyOTP = async (id, otp) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/bookings/${id}/verify-completion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user?.token}`
+        },
+        body: JSON.stringify({ otp })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const booking = bookings.find(b => b._id === id);
+        if (booking && socket) {
+          socket.emit('bookingUpdate', { receiverId: booking.user._id, bookingId: id, status: 'completed' });
+        }
+        setBookings(bookings.map(b => b._id === id ? { ...b, status: 'completed' } : b));
+        alert('Work completed and verified!');
+      } else {
+        alert(data.message || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('Failed to verify OTP', error);
+    }
+  };
+
   const pendingRequests = bookings.filter(b => b.status === 'pending');
-  const upcomingJobs = bookings.filter(b => b.status === 'accepted');
-  const completedJobsCount = bookings.filter(b => b.status === 'completed').length;
+  const upcomingJobs = bookings.filter(b => b.status === 'accepted' || b.status === 'in-progress');
+  const completedJobs = bookings.filter(b => b.status === 'completed');
+  const totalEarnings = completedJobs.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
 
   const stats = [
-    { label: 'Total Earnings', value: '₹0', icon: <FiDollarSign size={24} />, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
-    { label: 'Jobs Completed', value: completedJobsCount.toString(), icon: <FiCalendar size={24} />, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-    { label: 'Rating', value: 'New', icon: <FiStar size={24} />, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' },
-    { label: 'Profile Views', value: '0', icon: <FiTrendingUp size={24} />, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' },
+    { label: 'Total Earnings', value: `₹${totalEarnings.toLocaleString()}`, icon: <FiDollarSign size={24} />, color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
+    { label: 'Jobs Completed', value: completedJobs.length.toString(), icon: <FiCalendar size={24} />, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
+    { label: 'Rating', value: completedJobs.length > 0 ? '⭐' : 'New', icon: <FiStar size={24} />, color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-500' },
+    { label: 'Total Bookings', value: bookings.length.toString(), icon: <FiTrendingUp size={24} />, color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' },
   ];
 
   if (loading) {
@@ -125,8 +175,39 @@ export default function ProviderOverview() {
                 <div key={job._id} className="relative pl-6 border-l-2 border-teal-500">
                   <span className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-teal-500 border-4 border-white dark:border-slate-800"></span>
                   <p className="text-sm font-bold text-slate-800 dark:text-white">{new Date(job.date).toLocaleDateString()}, {job.time}</p>
+                  <p className="text-xs font-medium text-teal-600 dark:text-teal-400 uppercase tracking-tight">{job.status}</p>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 truncate" title={job.serviceLocation}>{job.serviceLocation}</p>
-                  <button onClick={() => handleUpdateStatus(job._id, 'completed')} className="mt-2 text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline">Mark as Completed</button>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {job.status === 'accepted' && (
+                      <button onClick={() => handleUpdateStatus(job._id, 'in-progress')} className="text-xs px-3 py-1.5 bg-teal-500 text-white rounded-md font-bold">Start Work</button>
+                    )}
+                    {job.status === 'in-progress' && !job.otpRequested && (
+                      <button onClick={() => handleRequestCompletion(job._id)} className="text-xs px-3 py-1.5 bg-indigo-500 text-white rounded-md font-bold">Request OTP</button>
+                    )}
+                    {job.status === 'in-progress' && job.otpRequested && (
+                      <div className="flex gap-2 w-full">
+                        <input
+                          type="text"
+                          id={`otp-${job._id}`}
+                          placeholder="Enter 4-digit OTP"
+                          className="text-xs border rounded px-2 py-1 w-24 dark:bg-slate-700 dark:text-white"
+                        />
+                        <button
+                          onClick={() => handleVerifyOTP(job._id, document.getElementById(`otp-${job._id}`).value)}
+                          className="text-xs px-3 py-1 bg-green-500 text-white rounded font-bold"
+                        >
+                          Verify
+                        </button>
+                        <button
+                          onClick={() => handleRequestCompletion(job._id)}
+                          className="text-[10px] text-slate-500 hover:text-indigo-600 underline font-medium"
+                        >
+                          Resend OTP
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}

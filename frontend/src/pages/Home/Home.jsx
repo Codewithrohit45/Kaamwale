@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiSearch, FiMapPin, FiTool, FiZap, FiBook, FiWind, FiScissors, FiHome } from 'react-icons/fi';
 import { MdOutlineConstruction, MdOutlinePlumbing } from 'react-icons/md';
 import { motion } from 'framer-motion';
@@ -7,20 +7,14 @@ import Button from '../../components/Button';
 import ServiceCard from '../../components/ServiceCard';
 
 const categories = [
-  { name: 'Labour', icon: <MdOutlineConstruction size={32} />, color: 'bg-orange-100 text-orange-600' },
-  { name: 'Plumber', icon: <MdOutlinePlumbing size={32} />, color: 'bg-blue-100 text-blue-600' },
-  { name: 'Electrician', icon: <FiZap size={32} />, color: 'bg-yellow-100 text-yellow-600' },
-  { name: 'Carpenter', icon: <FiTool size={32} />, color: 'bg-amber-100 text-amber-600' },
-  { name: 'Tutor', icon: <FiBook size={32} />, color: 'bg-purple-100 text-purple-600' },
-  { name: 'Painter', icon: <FiHome size={32} />, color: 'bg-pink-100 text-pink-600' },
-  { name: 'Mechanic', icon: <FiScissors size={32} />, color: 'bg-gray-100 text-gray-600' },
-  { name: 'AC Repair', icon: <FiWind size={32} />, color: 'bg-cyan-100 text-cyan-600' }
-];
-
-const featuredProviders = [
-  { id: 1, name: 'Rajesh Kumar', category: 'Labour', rating: 4.8, hourlyRate: 300, location: 'Andheri East, Mumbai', description: 'Experienced construction and general labour with 5+ years of experience.', image: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?q=80&w=200&auto=format&fit=crop' },
-  { id: 2, name: 'Suresh Plumbing', category: 'Plumber', rating: 4.9, hourlyRate: 400, location: 'Koramangala, Bengaluru', description: 'Expert in leak repairs, pipe installations and bathroom fittings.', image: 'https://images.unsplash.com/photo-1603712725038-e933396ce100?q=80&w=200&auto=format&fit=crop' },
-  { id: 3, name: 'Amit Electrician', category: 'Electrician', rating: 4.7, hourlyRate: 350, location: 'Lajpat Nagar, Delhi', description: 'Certified electrician for house wiring, appliance repair and lighting.', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=200&auto=format&fit=crop' },
+  { name: 'Labour', image: 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150&h=150&fit=crop', color: 'bg-orange-100 text-orange-600' },
+  { name: 'Plumber', image: 'https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=150&h=150&fit=crop', color: 'bg-blue-100 text-blue-600' },
+  { name: 'Electrician', image: 'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=150&h=150&fit=crop', color: 'bg-yellow-100 text-yellow-600' },
+  { name: 'Carpenter', image: 'https://images.unsplash.com/photo-1505798577917-a65157d3320a?w=150&h=150&fit=crop', color: 'bg-amber-100 text-amber-600' },
+  { name: 'Tutor', image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=150&h=150&fit=crop', color: 'bg-purple-100 text-purple-600' },
+  { name: 'Painter', image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=150&h=150&fit=crop', color: 'bg-pink-100 text-pink-600' },
+  { name: 'Mechanic', image: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=150&h=150&fit=crop', color: 'bg-gray-100 text-gray-600' },
+  { name: 'AC Repair', image: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=150&h=150&fit=crop', color: 'bg-cyan-100 text-cyan-600' }
 ];
 
 const containerVariants = {
@@ -39,7 +33,24 @@ const itemVariants = {
 export default function Home() {
   const [search, setSearch] = useState('');
   const [location, setLocation] = useState('');
+  const [featuredProviders, setFeaturedProviders] = useState([]);
   const navigate = useNavigate();
+
+  // Fetch top-rated providers from the database
+  useEffect(() => {
+    const fetchTopProviders = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/providers/top');
+        const data = await res.json();
+        if (res.ok && data.length > 0) {
+          setFeaturedProviders(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch top providers', err);
+      }
+    };
+    fetchTopProviders();
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -128,9 +139,9 @@ export default function Home() {
           >
             {categories.map((cat, idx) => (
               <motion.div variants={itemVariants} key={idx}>
-                <Link to={`/search?category=${cat.name}`} className="group p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-center cursor-pointer h-full">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${cat.color}`}>
-                    {cat.icon}
+                <Link to={`/category/${cat.name.toLowerCase().replace(' ', '-')}`} className="group p-6 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center flex flex-col items-center justify-center cursor-pointer h-full">
+                  <div className={`w-20 h-20 rounded-2xl overflow-hidden flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-sm border border-slate-100 dark:border-slate-700`}>
+                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
                   </div>
                   <h3 className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{cat.name}</h3>
                 </Link>
@@ -140,7 +151,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Workers */}
+      {/* Featured Workers — Now from DB */}
       <section className="py-20 bg-slate-50 dark:bg-slate-800/50 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-12">
@@ -160,11 +171,18 @@ export default function Home() {
             viewport={{ once: true, margin: "-100px" }}
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
           >
-            {featuredProviders.map(provider => (
-              <motion.div variants={itemVariants} key={provider.id} className="h-full">
-                <ServiceCard provider={provider} />
-              </motion.div>
-            ))}
+            {featuredProviders.length > 0 ? (
+              featuredProviders.slice(0, 6).map(provider => (
+                <motion.div variants={itemVariants} key={provider._id} className="h-full">
+                  <ServiceCard provider={provider} />
+                </motion.div>
+              ))
+            ) : (
+              // Skeleton loaders while data loads
+              [1, 2, 3].map(i => (
+                <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl h-72 animate-pulse border border-slate-100 dark:border-slate-700"></div>
+              ))
+            )}
           </motion.div>
         </div>
       </section>
@@ -184,9 +202,9 @@ export default function Home() {
                 Become a Provider
               </Button>
             </Link>
-            <Link to="/about">
+            <Link to="/search">
               <Button variant="outline" size="lg" className="border-teal-400 text-teal-400 hover:bg-teal-900/50 rounded-xl px-8">
-                Learn More
+                Browse Services
               </Button>
             </Link>
           </div>

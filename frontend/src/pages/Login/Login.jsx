@@ -1,5 +1,6 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useState, useContext } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useContext, useEffect } from 'react';
+import { useToast } from '../../components/NotificationToast';
 import Button from '../../components/Button';
 import { FiMail, FiLock } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
@@ -11,7 +12,18 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
   const { login } = useContext(AuthContext);
+
+  const from = location.state?.from?.pathname || (role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
+  const message = location.state?.message;
+
+  useEffect(() => {
+    if (message) {
+      toast(message, 'info');
+    }
+  }, [message]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -22,12 +34,9 @@ export default function Login() {
       const user = await login(email, password);
       if (user.role === 'admin') {
         navigate('/admin/dashboard');
-      } else if (user.role !== role) {
-        // If they selected the wrong role toggle but logged in successfully anyway, 
-        // redirect them to their actual role's dashboard.
-        navigate(user.role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
       } else {
-        navigate(role === 'provider' ? '/provider/dashboard' : '/user/dashboard');
+        // Redirect to where they were going, or dashboard
+        navigate(from, { replace: true });
       }
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -100,9 +109,9 @@ export default function Login() {
               </label>
             </div>
             <div className="text-sm">
-              <a href="#" className="font-medium text-teal-600 dark:text-teal-400 hover:underline">
+              <Link to="/forgot-password" className="font-medium text-teal-600 dark:text-teal-400 hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </div>
 

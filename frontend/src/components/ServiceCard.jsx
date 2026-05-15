@@ -36,7 +36,7 @@ export default function ServiceCard({ provider }) {
           <span className="text-lg font-bold text-slate-800">₹{provider.hourlyRate}</span>
           <span className="text-slate-500 text-xs">/hr</span>
         </div>
-        <Link to={`/provider/${provider.id}`}>
+        <Link to={`/provider/${provider?._id || provider?.id || 'unknown'}`}>
           <Button variant="primary" size="sm">Book Now</Button>
         </Link>
       </div>

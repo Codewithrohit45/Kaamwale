@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FiHome, FiCalendar, FiDollarSign, FiUser, FiSettings, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
+import { FiHome, FiCalendar, FiDollarSign, FiUser, FiSettings, FiLogOut, FiMenu, FiX, FiMessageSquare, FiStar } from 'react-icons/fi';
 import { useState } from 'react';
 
 export default function DashboardLayout({ children, role = 'provider' }) {
@@ -8,16 +8,16 @@ export default function DashboardLayout({ children, role = 'provider' }) {
 
   const providerLinks = [
     { name: 'Overview', path: '/provider/dashboard', icon: <FiHome /> },
-    { name: 'Bookings', path: '/provider/bookings', icon: <FiCalendar /> },
-    { name: 'Earnings', path: '/provider/earnings', icon: <FiDollarSign /> },
+    { name: 'Availability', path: '/provider/availability', icon: <FiCalendar /> },
+    { name: 'Messages', path: '/provider/messages', icon: <FiMessageSquare /> },
+    { name: 'Reviews', path: '/provider/reviews', icon: <FiStar /> },
     { name: 'Profile', path: '/provider/profile', icon: <FiUser /> },
   ];
 
   const userLinks = [
     { name: 'My Bookings', path: '/user/dashboard', icon: <FiCalendar /> },
-    { name: 'Messages', path: '/user/messages', icon: <FiSettings /> },
-    { name: 'Saved Providers', path: '/user/saved', icon: <FiUser /> },
-    { name: 'Settings', path: '/user/settings', icon: <FiSettings /> },
+    { name: 'Messages', path: '/user/messages', icon: <FiMessageSquare /> },
+    { name: 'Profile', path: '/user/profile', icon: <FiUser /> },
   ];
 
   const links = role === 'provider' ? providerLinks : userLinks;

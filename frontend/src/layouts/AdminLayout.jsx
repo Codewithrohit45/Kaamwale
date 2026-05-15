@@ -1,10 +1,18 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiHome, FiUsers, FiCalendar, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 
 export default function AdminLayout({ children }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const adminLinks = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <FiHome /> },
@@ -49,10 +57,13 @@ export default function AdminLayout({ children }) {
         </div>
 
         <div className="mt-auto p-4 border-t border-slate-800">
-          <Link to="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-red-400 hover:bg-red-900/30 transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-red-400 hover:bg-red-900/30 transition-colors"
+          >
             <FiLogOut />
-            Exit Admin
-          </Link>
+            Logout Admin
+          </button>
         </div>
       </aside>
 
