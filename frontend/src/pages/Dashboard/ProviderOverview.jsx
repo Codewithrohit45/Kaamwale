@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
-import { FiDollarSign, FiCalendar, FiStar, FiTrendingUp, FiMapPin } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiDollarSign, FiCalendar, FiStar, FiTrendingUp, FiMapPin, FiMessageCircle } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 
@@ -106,6 +107,18 @@ export default function ProviderOverview() {
   };
 
   const handleVerifyOTP = async (id, otp) => {
+    let workerCoords = null;
+
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+      });
+      workerCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (err) {
+      alert('Location access is required to verify completion and check-out. Please enable GPS.');
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:5000/api/bookings/${id}/verify-completion`, {
         method: 'POST',
@@ -113,7 +126,7 @@ export default function ProviderOverview() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user?.token}`
         },
-        body: JSON.stringify({ otp })
+        body: JSON.stringify({ otp, workerCoords })
       });
       const data = await res.json();
       if (res.ok) {
@@ -216,6 +229,13 @@ export default function ProviderOverview() {
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 truncate" title={job.serviceLocation}>{job.serviceLocation}</p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <Link
+                      to="/provider/messages"
+                      state={{ startChatWith: job.user }}
+                      className="text-xs px-3 py-1.5 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-md font-bold flex items-center gap-1 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      <FiMessageCircle size={12} /> Chat
+                    </Link>
                     {job.status === 'accepted' && (
                       <button onClick={() => handleUpdateStatus(job._id, 'in-progress')} className="text-xs px-3 py-1.5 bg-teal-500 text-white rounded-md font-bold">Start Work</button>
                     )}

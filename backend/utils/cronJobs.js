@@ -49,8 +49,8 @@ const initCronJobs = () => {
           
           // Auto-badge award
           if (score >= 95 && stats[0].total >= 10) {
-            if (!provider.badges.includes('Trusted Local Worker')) {
-              provider.badges.push('Trusted Local Worker');
+            if (!provider.trustBadges.includes('Trusted Local Worker')) {
+              provider.trustBadges.push('Trusted Local Worker');
             }
           }
           await provider.save();

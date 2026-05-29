@@ -120,6 +120,10 @@ const bookingSchema = new mongoose.Schema({
     lat: Number,
     lng: Number
   },
+  workerCheckOutCoords: {
+    lat: Number,
+    lng: Number
+  },
   isLocationVerified: {
     type: Boolean,
     default: false

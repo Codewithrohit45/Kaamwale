@@ -59,7 +59,7 @@ function App() {
         <Route path="/provider/messages" element={<ProtectedRoute role="provider"><DashboardLayout role="provider"><Messages /></DashboardLayout></ProtectedRoute>} />
         
         {/* User Dashboard Routes */}
-        <Route path="/user/dashboard" element={<ProtectedRoute role="user"><DashboardLayout role="user"><UserDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/user/dashboard" element={<ProtectedRoute role="user"><DashboardLayout role="user"><UserProfileEdit /></DashboardLayout></ProtectedRoute>} />
         <Route path="/user/profile" element={<ProtectedRoute role="user"><DashboardLayout role="user"><UserProfileEdit /></DashboardLayout></ProtectedRoute>} />
         <Route path="/user/messages" element={<ProtectedRoute role="user"><DashboardLayout role="user"><Messages /></DashboardLayout></ProtectedRoute>} />
         

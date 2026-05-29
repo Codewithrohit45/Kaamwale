@@ -97,10 +97,10 @@ export default function Signup() {
         {/* Role Toggle (Only visible on Step 1) */}
         {step === 1 && (
           <div className="flex p-1 bg-slate-200/50 dark:bg-slate-700/50 rounded-lg">
-            <Link to="/signup?role=user" className={`flex-1 text-center py-2 rounded-md text-sm font-medium transition-colors ${role !== 'provider' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+            <Link to="/signup?role=user" state={{ from }} className={`flex-1 text-center py-2 rounded-md text-sm font-medium transition-colors ${role !== 'provider' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
               I need services
             </Link>
-            <Link to="/signup?role=provider" className={`flex-1 text-center py-2 rounded-md text-sm font-medium transition-colors ${role === 'provider' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+            <Link to="/signup?role=provider" state={{ from }} className={`flex-1 text-center py-2 rounded-md text-sm font-medium transition-colors ${role === 'provider' ? 'bg-white dark:bg-slate-600 shadow text-slate-800 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
               I am a provider
             </Link>
           </div>
@@ -240,7 +240,7 @@ export default function Signup() {
         {step === 1 && (
           <div className="text-center mt-4">
             <span className="text-sm text-slate-600 dark:text-slate-400">Already have an account? </span>
-            <Link to="/login" className="font-medium text-teal-600 dark:text-teal-400 hover:underline text-sm">
+            <Link to="/login" state={{ from }} className="font-medium text-teal-600 dark:text-teal-400 hover:underline text-sm">
               Sign in
             </Link>
           </div>

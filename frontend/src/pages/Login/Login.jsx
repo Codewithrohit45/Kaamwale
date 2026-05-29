@@ -122,7 +122,7 @@ export default function Login() {
         
         <div className="text-center mt-4">
           <span className="text-sm text-slate-600 dark:text-slate-400">Don't have an account? </span>
-          <Link to={`/signup?role=${role}`} className="font-medium text-teal-600 dark:text-teal-400 hover:underline text-sm">
+          <Link to={`/signup?role=${role}`} state={{ from }} className="font-medium text-teal-600 dark:text-teal-400 hover:underline text-sm">
             Sign up as {role}
           </Link>
         </div>

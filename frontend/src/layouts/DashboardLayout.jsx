@@ -18,9 +18,9 @@ export default function DashboardLayout({ children, role = 'provider' }) {
   ];
 
   const userLinks = [
-    { name: 'My Bookings', path: '/user/dashboard', icon: <FiCalendar /> },
+    { name: 'My Bookings', path: '/user/profile?tab=bookings', icon: <FiCalendar /> },
     { name: 'Messages', path: '/user/messages', icon: <FiMessageSquare /> },
-    { name: 'Profile', path: '/user/profile', icon: <FiUser /> },
+    { name: 'Profile', path: '/user/profile?tab=settings', icon: <FiUser /> },
   ];
 
   const links = role === 'provider' ? providerLinks : userLinks;
@@ -45,7 +45,8 @@ export default function DashboardLayout({ children, role = 'provider' }) {
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">Menu</p>
           <nav className="space-y-1">
             {links.map((link) => {
-              const isActive = location.pathname === link.path;
+              const isActive = (location.pathname + location.search) === link.path || 
+                               (link.path === '/user/profile?tab=bookings' && location.pathname === '/user/profile' && !location.search);
               return (
                 <Link
                   key={link.name}

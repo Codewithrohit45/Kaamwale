@@ -25,6 +25,17 @@ export default function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const getNext14Days = () => {
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(today.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  };
+
   useEffect(() => {
     // Redirect if not logged in
     if (!user) {
@@ -123,10 +134,55 @@ export default function Booking() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 dark:bg-slate-900 transition-colors min-h-screen">
-      <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-8">Complete Your Booking</h1>
+      <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-4 text-center md:text-left">Complete Your Booking</h1>
       
+      {/* Animated checkout progress indicator */}
+      <div className="mb-10 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between relative">
+          <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-700 z-0">
+            <div 
+              className="h-full bg-teal-500 transition-all duration-500" 
+              style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}
+            ></div>
+          </div>
+
+          <div className="flex flex-col items-center relative z-10">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-350 ${
+              step >= 1 
+                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 ring-4 ring-teal-50 dark:ring-teal-900/40' 
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              1
+            </div>
+            <span className="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Date & Time</span>
+          </div>
+
+          <div className="flex flex-col items-center relative z-10">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-350 ${
+              step >= 2 
+                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 ring-4 ring-teal-50 dark:ring-teal-900/40' 
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              2
+            </div>
+            <span className="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Location Details</span>
+          </div>
+
+          <div className="flex flex-col items-center relative z-10">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-350 ${
+              step >= 3 
+                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 ring-4 ring-teal-50 dark:ring-teal-900/40' 
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}>
+              3
+            </div>
+            <span className="text-xs font-semibold mt-2 text-slate-600 dark:text-slate-400">Confirmation</span>
+          </div>
+        </div>
+      </div>
+
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm">
+        <div className="bg-red-55 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-xl mb-6 text-sm text-center">
           {error}
         </div>
       )}
@@ -141,66 +197,110 @@ export default function Booking() {
                 ? provider.workingHours
                 : ['09:00 AM', '11:00 AM', '02:00 PM', '04:00 PM', '06:00 PM'];
               const isSlotBlocked = (t) => date && provider.blockedSlots && provider.blockedSlots.some(s => s.date === date && s.time === t);
+              const days = getNext14Days();
 
               return (
               <div className="space-y-6">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2"><FiCalendar /> Date & Time</h3>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2"><FiCalendar className="text-teal-500" /> Date & Time</h3>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Date</label>
-                  <input 
-                    type="date" 
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full border border-slate-200 dark:border-slate-600 rounded-lg p-3 outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-700 dark:text-white" 
-                    value={date} 
-                    onChange={(e) => { setDate(e.target.value); setTime(''); }} 
-                  />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Select Date</label>
+                  
+                  {/* Horizontally scrolling week day selector */}
+                  <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">
+                    {days.map((d) => {
+                      const dateStr = d.toISOString().split('T')[0];
+                      const isSelected = date === dateStr;
+                      const isBlocked = provider.unavailableDates && provider.unavailableDates.includes(dateStr);
+                      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+                      const dayNum = d.getDate();
+                      const monthName = d.toLocaleDateString('en-US', { month: 'short' });
+
+                      return (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          disabled={isBlocked}
+                          onClick={() => { setDate(dateStr); setTime(''); }}
+                          className={`flex flex-col items-center min-w-[72px] py-4 px-3 rounded-2xl border-2 transition-all duration-200 relative shrink-0 ${
+                            isBlocked
+                              ? 'bg-slate-50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed line-through opacity-60'
+                              : isSelected
+                                ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-500 text-teal-700 dark:text-teal-300 shadow-md shadow-teal-500/10 scale-102 font-bold'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-300 dark:hover:border-teal-500 hover:bg-slate-50 dark:hover:bg-slate-750'
+                          }`}
+                        >
+                          <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">{dayName}</span>
+                          <span className="text-xl font-black my-1">{dayNum}</span>
+                          <span className="text-[10px] font-bold opacity-60">{monthName}</span>
+                          {isBlocked && (
+                            <span className="absolute bottom-1 text-[8px] bg-red-100 dark:bg-red-900/40 text-red-650 dark:text-red-400 font-bold px-1 rounded">OFF</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   {customerCoords ? (
-                    <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-1 flex items-center gap-1">
+                    <p className="text-[10px] text-teal-600 dark:text-teal-400 font-bold mt-2 flex items-center gap-1">
                       <FiMapPin size={10} /> GPS LOCATION CAPTURED
                     </p>
                   ) : (
-                    <p className="text-[10px] text-amber-600 font-bold mt-1">
+                    <p className="text-[10px] text-amber-600 font-bold mt-2">
                       ⚠️ Enable GPS for better verification
                     </p>
                   )}
                   {isDateBlocked && (
-                    <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                    <p className="text-red-500 text-sm mt-3 flex items-center gap-1 font-semibold">
                       ⚠️ This provider is unavailable on the selected date.
                     </p>
                   )}
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Time Slot</label>
-                  {isDateBlocked ? (
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Select Time Slot</label>
+                  {!date ? (
+                    <p className="text-slate-400 dark:text-slate-500 text-sm py-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50/50 dark:bg-slate-800/10">Please choose a date above first to view available times.</p>
+                  ) : isDateBlocked ? (
                     <p className="text-slate-400 dark:text-slate-500 text-sm py-4 text-center">Pick a different date to see available slots.</p>
                   ) : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {availableSlots.map(t => {
                         const blocked = isSlotBlocked(t);
+                        const isSelected = time === t;
                         return (
                           <button 
                             key={t}
+                            type="button"
                             onClick={() => !blocked && setTime(t)}
                             disabled={blocked}
-                            className={`py-2.5 px-3 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                            className={`py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all duration-200 flex items-center justify-between ${
                               blocked
-                                ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30 text-red-300 dark:text-red-700 cursor-not-allowed line-through'
-                                : time === t
-                                  ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-500 text-teal-700 dark:text-teal-300 shadow-sm'
-                                  : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-teal-300 dark:hover:border-teal-500'
+                                ? 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20 text-red-300 dark:text-red-700 cursor-not-allowed line-through'
+                                : isSelected
+                                  ? 'bg-teal-50 dark:bg-teal-900/30 border-teal-500 text-teal-700 dark:text-teal-300 shadow-md shadow-teal-500/10 font-bold scale-101'
+                                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-teal-300 dark:hover:border-teal-500'
                             }`}
                           >
-                            {t}
-                            {blocked && <span className="block text-[10px] mt-0.5">Booked</span>}
+                            <span className="flex items-center gap-2">
+                              <FiClock className={isSelected ? 'text-teal-550' : 'text-slate-400'} />
+                              {t}
+                            </span>
+                            {blocked ? (
+                              <span className="text-[10px] font-bold bg-red-100 dark:bg-red-900/25 px-1.5 py-0.5 rounded-md text-red-600 dark:text-red-400">Booked</span>
+                            ) : isSelected ? (
+                              <FiCheckCircle className="text-teal-500 font-bold" />
+                            ) : null}
                           </button>
                         );
                       })}
                     </div>
                   )}
                 </div>
+
                 <Button 
+                  type="button"
                   variant="primary" 
-                  className="w-full py-3 mt-4" 
+                  className="w-full py-3.5 mt-4 text-base font-bold shadow-md shadow-teal-500/20 rounded-xl" 
                   onClick={handleNext} 
                   disabled={!date || !time || isDateBlocked || isSlotBlocked(time)}
                 >
@@ -210,12 +310,12 @@ export default function Booking() {
               );
             })() : (
               <div className="space-y-6">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2"><FiMapPin /> Location</h3>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2"><FiMapPin className="text-teal-500" /> Location</h3>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Full Address</label>
                   <textarea 
                     rows="3" 
-                    className="w-full border border-slate-200 dark:border-slate-600 rounded-lg p-3 outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-700 dark:text-white" 
+                    className="w-full border border-slate-250 dark:border-slate-600 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 dark:bg-slate-700 dark:text-white" 
                     placeholder="Enter your exact location..."
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
@@ -224,23 +324,23 @@ export default function Booking() {
                 <div className="bg-slate-50 dark:bg-slate-700/50 rounded-2xl p-6 space-y-4">
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Service Fee ({estimatedHours} hrs × {workerCount} {workerCount > 1 ? 'workers' : 'worker'})</span>
-                    <span className="font-bold text-slate-800 dark:text-white">₹{(provider.hourlyRate * estimatedHours * workerCount).toLocaleString()}</span>
+                    <span className="font-bold text-slate-850 dark:text-white">₹{(provider.hourlyRate * estimatedHours * workerCount).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 dark:text-slate-400">
                     <span>Platform Fee</span>
-                    <span className="font-bold text-slate-800 dark:text-white">₹50</span>
+                    <span className="font-bold text-slate-850 dark:text-white">₹50</span>
                   </div>
                   {isEmergency && (
-                    <div className="flex justify-between text-red-600 font-bold">
+                    <div className="flex justify-between text-red-650 font-bold">
                       <span>Emergency Priority</span>
                       <span>+ ₹100</span>
                     </div>
                   )}
                   <div className="flex gap-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-                    <Button variant="outline" className="flex-1 py-3" onClick={() => setStep(1)} disabled={submitting}>Back</Button>
+                    <Button type="button" variant="outline" className="flex-1 py-3" onClick={() => setStep(1)} disabled={submitting}>Back</Button>
                     <div className="flex-[2] text-right">
                       <p className="text-sm font-medium text-slate-500">Total Amount</p>
-                      <p className="text-3xl font-black text-teal-600">₹{(provider.hourlyRate * estimatedHours * workerCount + 50 + (isEmergency ? 100 : 0)).toLocaleString()}</p>
+                      <p className="text-3xl font-black text-teal-650 dark:text-teal-400">₹{(provider.hourlyRate * estimatedHours * workerCount + 50 + (isEmergency ? 100 : 0)).toLocaleString()}</p>
                     </div>
                   </div>
                   <Button variant="primary" className="w-full py-4 mt-2" onClick={handleConfirmBooking} disabled={submitting || !address}>

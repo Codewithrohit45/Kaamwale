@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { FiSend, FiMessageCircle, FiArrowLeft } from 'react-icons/fi';
 import { AuthContext } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -8,6 +9,7 @@ const SOCKET_URL = 'http://localhost:5000';
 export default function Messages() {
   const { user } = useContext(AuthContext);
   const { socket, onlineUsers: globalOnlineUsers, clearUnread } = useSocket();
+  const location = useLocation();
   const [conversations, setConversations] = useState([]);
   const [activeChat, setActiveChat] = useState(null); // { otherUser, conversationId }
   const [messages, setMessages] = useState([]);
@@ -66,6 +68,36 @@ export default function Messages() {
     };
     if (user?.token) fetchConvos();
   }, [user]);
+
+  // Handle startChatWith redirect state
+  useEffect(() => {
+    if (loading || !user) return;
+    
+    const startChatWith = location.state?.startChatWith;
+    if (startChatWith) {
+      const existingConv = conversations.find(c => c.otherUser?._id === startChatWith._id);
+      
+      if (existingConv) {
+        openChat(existingConv);
+      } else {
+        // Create temporary conversation card
+        const conversationId = [userId, startChatWith._id].sort().join('_');
+        const tempConv = {
+          conversationId,
+          otherUser: startChatWith,
+          lastMessage: 'Tap to start chatting!',
+          lastMessageTime: new Date().toISOString(),
+          unreadCount: 0
+        };
+        setConversations(prev => {
+          const exists = prev.find(c => c.conversationId === conversationId);
+          if (exists) return prev;
+          return [tempConv, ...prev];
+        });
+        setActiveChat({ otherUser: startChatWith, conversationId });
+      }
+    }
+  }, [location.state, conversations, loading, userId, user]);
 
   // Fetch messages when active chat changes
   useEffect(() => {

@@ -67,6 +67,11 @@ const userSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  repeatCustomers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }],
   completedBookings: {
     type: Number,
     default: 0,

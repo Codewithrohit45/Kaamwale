@@ -27,10 +27,6 @@ exports.createBooking = async (req, res) => {
       return res.status(400).json({ message: 'This time slot is not available on the selected date' });
     }
 
-    const hours = estimatedHours || 2;
-    const basePrice = (provider.hourlyRate || 300) * hours;
-    const totalPrice = (basePrice * workerCount) + 50; 
-
     // Fake Booking Prevention
     const pendingCount = await Booking.countDocuments({ user: req.user.id, status: 'pending' });
     if (pendingCount >= 3) {
@@ -189,6 +185,17 @@ exports.updateBookingStatus = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this booking' });
     }
 
+    // Validate status transitions (validate BEFORE mutating!)
+    const validTransitions = {
+      'pending': ['accepted', 'cancelled'],
+      'accepted': ['in-progress', 'cancelled'],
+      'in-progress': ['completed', 'cancelled'],
+    };
+
+    if (!validTransitions[booking.status] || !validTransitions[booking.status].includes(status)) {
+      return res.status(400).json({ message: `Cannot transition from ${booking.status} to ${status}` });
+    }
+
     // GPS Check-in logic for starting work
     if (status === 'in-progress') {
       if (!workerCoords || !workerCoords.lat || !workerCoords.lng) {
@@ -201,7 +208,8 @@ exports.updateBookingStatus = async (req, res) => {
           workerCoords.lat, workerCoords.lng
         );
 
-        if (dist > 0.5) { // 500 meters
+        const isDevMode = process.env.NODE_ENV !== 'production';
+        if (dist > 0.5 && !isDevMode) { // 500 meters check bypassed in local dev testing
           return res.status(400).json({ message: `Check-in failed. You are ${(dist * 1000).toFixed(0)}m away from the location. Please be on-site to start.` });
         }
         booking.isLocationVerified = true;
@@ -209,28 +217,36 @@ exports.updateBookingStatus = async (req, res) => {
       }
     }
 
-    booking.status = status;
-
-    // Validate status transitions
-    const validTransitions = {
-      'pending': ['accepted', 'cancelled'],
-      'accepted': ['in-progress', 'cancelled'],
-      'in-progress': ['completed', 'cancelled'],
-    };
-
-    if (!validTransitions[booking.status] || !validTransitions[booking.status].includes(status)) {
-      return res.status(400).json({ message: `Cannot transition from ${booking.status} to ${status}` });
+    if (status === 'accepted') {
+      const provider = await User.findById(req.user.id);
+      if (provider) {
+        if (!provider.blockedSlots) provider.blockedSlots = [];
+        const exists = provider.blockedSlots.some(s => s.date === booking.date && s.time === booking.time);
+        if (!exists) {
+          provider.blockedSlots.push({ date: booking.date, time: booking.time });
+          await provider.save();
+        }
+      }
     }
 
     booking.status = status;
 
     if (status === 'completed') {
+      if (booking.paymentStatus !== 'paid') {
+        return res.status(400).json({ message: 'Work cannot be completed before payment is successful.' });
+      }
       booking.completedAt = new Date();
     }
     if (status === 'cancelled') {
       booking.cancelledBy = 'provider';
       if (booking.paymentStatus === 'paid') {
         await processRefund(booking._id, 'Provider cancelled after payment');
+      }
+      // Release slot from provider's blocked slots
+      const provider = await User.findById(booking.provider);
+      if (provider && provider.blockedSlots) {
+        provider.blockedSlots = provider.blockedSlots.filter(s => !(s.date === booking.date && s.time === booking.time));
+        await provider.save();
       }
     }
 
@@ -294,6 +310,13 @@ exports.cancelBooking = async (req, res) => {
     booking.cancelledBy = 'user';
     booking.cancellationReason = reason || '';
     await booking.save();
+
+    // Release slot from provider's blocked slots
+    const provider = await User.findById(booking.provider);
+    if (provider && provider.blockedSlots) {
+      provider.blockedSlots = provider.blockedSlots.filter(s => !(s.date === booking.date && s.time === booking.time));
+      await provider.save();
+    }
 
     const populated = await Booking.findById(booking._id).populate('user', 'name');
 
@@ -423,7 +446,7 @@ exports.requestCompletion = async (req, res) => {
 // @access  Private (Provider)
 exports.verifyCompletion = async (req, res) => {
   try {
-    const { otp } = req.body;
+    const { otp, workerCoords } = req.body;
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -432,6 +455,28 @@ exports.verifyCompletion = async (req, res) => {
 
     if (booking.provider.toString() !== req.user.id) {
       return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    if (booking.paymentStatus !== 'paid') {
+      return res.status(400).json({ message: 'Work cannot be completed before payment is successful.' });
+    }
+
+    // Verify check-out GPS proximity
+    if (booking.customerCoords && booking.customerCoords.lat) {
+      if (!workerCoords || !workerCoords.lat || !workerCoords.lng) {
+        return res.status(400).json({ message: 'GPS coordinates are required to check-out and complete work.' });
+      }
+
+      const dist = getDistance(
+        booking.customerCoords.lat, booking.customerCoords.lng,
+        workerCoords.lat, workerCoords.lng
+      );
+
+      const isDevMode = process.env.NODE_ENV !== 'production';
+      if (dist > 0.5 && !isDevMode) { // 500 meters check bypassed in local dev testing
+        return res.status(400).json({ message: `Check-out failed. You are ${(dist * 1000).toFixed(0)}m away from the location. Please be on-site to complete work.` });
+      }
+      booking.workerCheckOutCoords = workerCoords;
     }
 
     if (booking.completionOTP !== otp) {
@@ -451,6 +496,9 @@ exports.verifyCompletion = async (req, res) => {
     provider.reliabilityScore = Math.round((completedBookingsCount / totalBookingsCount) * 100);
     
     // Repeat Customer Tracking
+    if (!provider.repeatCustomers) {
+      provider.repeatCustomers = [];
+    }
     if (!provider.repeatCustomers.includes(booking.user)) {
       provider.repeatCustomers.push(booking.user);
     }

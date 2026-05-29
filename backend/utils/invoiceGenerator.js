@@ -59,21 +59,21 @@ const generateInvoice = (booking, stream) => {
   doc.fillColor('#1e293b')
      .text(`${booking.provider.category} Service (${booking.workerCount || 1} Worker/s)`, 60, itemTop)
      .text(`${booking.estimatedHours} hrs`, 250, itemTop)
-     .text(`₹${booking.provider.hourlyRate}/hr`, 350, itemTop)
-     .text(`₹${baseServicePrice.toLocaleString()}`, 450, itemTop, { align: 'right' });
+     .text(`Rs. ${booking.provider.hourlyRate}/hr`, 350, itemTop)
+     .text(`Rs. ${baseServicePrice.toLocaleString()}`, 450, itemTop, { align: 'right' });
 
   itemTop += 25;
   doc.text('Platform Service Fee', 60, itemTop)
      .text('--', 250, itemTop)
      .text('--', 350, itemTop)
-     .text(`₹${(booking.platformFee || 50).toLocaleString()}`, 450, itemTop, { align: 'right' });
+     .text(`Rs. ${(booking.platformFee || 50).toLocaleString()}`, 450, itemTop, { align: 'right' });
 
   if (booking.isEmergency) {
     itemTop += 25;
     doc.fillColor('#dc2626').text('Emergency Priority Handling', 60, itemTop)
        .text('--', 250, itemTop)
        .text('--', 350, itemTop)
-       .text(`₹100`, 450, itemTop, { align: 'right' });
+       .text(`Rs. 100`, 450, itemTop, { align: 'right' });
   }
 
   // --- TOTALS ---
@@ -83,15 +83,15 @@ const generateInvoice = (booking, stream) => {
   
   const totalY = doc.y;
   doc.fillColor('#64748b').text('Subtotal:', 350, totalY);
-  doc.fillColor('#1e293b').text(`₹${booking.totalPrice.toLocaleString()}`, 450, totalY, { align: 'right' });
+  doc.fillColor('#1e293b').text(`Rs. ${booking.totalPrice.toLocaleString()}`, 450, totalY, { align: 'right' });
 
   doc.moveDown(0.5);
   doc.fillColor('#64748b').text('Tax (GST 0% included):', 350, doc.y);
-  doc.fillColor('#1e293b').text(`₹0`, 450, doc.y, { align: 'right' });
+  doc.fillColor('#1e293b').text(`Rs. 0`, 450, doc.y, { align: 'right' });
 
   doc.moveDown(1);
   doc.fontSize(15).fillColor('#0d9488').text('TOTAL PAID:', 350, doc.y, { bold: true });
-  doc.text(`₹${booking.totalPrice.toLocaleString()}`, 450, doc.y, { align: 'right', bold: true });
+  doc.text(`Rs. ${booking.totalPrice.toLocaleString()}`, 450, doc.y, { align: 'right', bold: true });
 
   // --- FOOTER ---
   const footerTop = 750;

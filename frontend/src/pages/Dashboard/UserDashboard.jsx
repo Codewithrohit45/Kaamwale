@@ -8,6 +8,7 @@ import {
   FiDollarSign,
   FiCreditCard,
   FiDownload,
+  FiMessageCircle,
 } from "react-icons/fi";
 import { AuthContext } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -30,7 +31,29 @@ const RecenterMap = ({ coords }) => {
   return null;
 };
 
-export default function UserDashboard() {
+const calculateETA = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return "Calculating...";
+  
+  const R = 6371; // Radius of earth in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c; // Distance in km
+
+  if (distance < 0.08) return "Arrived / On-Site 📍";
+
+  // Assume average speed of 25 km/h in city traffic
+  const durationMinutes = Math.round((distance / 25) * 60);
+  return `${durationMinutes} mins (${distance.toFixed(1)} km)`;
+};
+
+export default function UserDashboard({ hideHeader = false }) {
   const { user } = useContext(AuthContext);
   const { socket } = useSocket();
   const toast = useToast();
@@ -420,14 +443,16 @@ export default function UserDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 dark:bg-slate-900 transition-colors pb-10">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
-          My Bookings
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Track and manage your service requests.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">
+            My Bookings
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Track and manage your service requests.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
@@ -664,6 +689,16 @@ export default function UserDashboard() {
                       >
                         Approve Work
                       </button>
+                    )}
+
+                    {["pending", "accepted", "in-progress"].includes(booking.status) && (
+                      <Link
+                        to="/user/messages"
+                        state={{ startChatWith: booking.provider }}
+                        className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-sm flex items-center gap-1"
+                      >
+                        <FiMessageCircle size={14} /> Chat
+                      </Link>
                     )}
 
                     {["pending", "accepted"].includes(booking.status) && (
@@ -935,6 +970,12 @@ export default function UserDashboard() {
                     trackingModal.customerCoords?.coordinates?.[1] || 19.076,
                     trackingModal.customerCoords?.coordinates?.[0] || 72.8777,
                   ]}
+                  icon={L.divIcon({
+                    className: "custom-customer-icon",
+                    html: `<div style="background-color:#ef4444;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 0 10px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><div style="background-color:white;width:6px;height:6px;border-radius:50%;"></div></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10],
+                  })}
                 >
                   <Popup>Service Location</Popup>
                 </Marker>
@@ -979,7 +1020,16 @@ export default function UserDashboard() {
                   <p className="text-xs text-slate-500 font-medium">
                     Est. Arrival
                   </p>
-                  <p className="font-bold text-teal-600">Calculating...</p>
+                  <p className="font-bold text-teal-600">
+                    {workerLocations[trackingModal._id]
+                      ? calculateETA(
+                          trackingModal.customerCoords?.coordinates?.[1],
+                          trackingModal.customerCoords?.coordinates?.[0],
+                          workerLocations[trackingModal._id].lat,
+                          workerLocations[trackingModal._id].lng
+                        )
+                      : "Calculating..."}
+                  </p>
                 </div>
               </div>
             </div>
